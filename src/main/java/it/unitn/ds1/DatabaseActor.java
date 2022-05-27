@@ -14,9 +14,8 @@ public class DatabaseActor extends AbstractActor {
 
   private List<ActorRef> l1Caches;
   private Dictionary<Integer, Integer> database;
-  /*-- Actor constructors --------------------------------------------------- */
-  public DatabaseActor(List<ActorRef> l1Caches) {
-    this.l1Caches = l1Caches;
+
+  public DatabaseActor() {
     populateDatabase();
   }
   private void populateDatabase(){
@@ -25,9 +24,8 @@ public class DatabaseActor extends AbstractActor {
       database.put(i, i);
     }
   }
-
-  static public Props props(List<ActorRef> l1Caches) {
-    return Props.create(DatabaseActor.class, ()->new DatabaseActor(l1Caches));
+  static public Props props() {
+    return Props.create(DatabaseActor.class, DatabaseActor::new);
   }
 
 //  private int multicast(Serializable m, Set<ActorRef> multicastGroup) {
@@ -56,13 +54,17 @@ public class DatabaseActor extends AbstractActor {
 //
 //    return i;
 //  }
+  private void onTopologyMessage(Messages.TopologyMessage message){
 
+    this.l1Caches = message.children;
+  }
 
   // Here we define the mapping between the received message types
   // and our actor methods
   @Override
   public Receive createReceive() {
     return receiveBuilder()
+            .match(Messages.TopologyMessage.class, this::onTopologyMessage)
             .build();
 
   }

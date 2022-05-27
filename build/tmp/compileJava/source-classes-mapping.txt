@@ -1,19 +1,12 @@
-it/unitn/ds1/VirtualSynch.java
- it.unitn.ds1.VirtualSynch
-it/unitn/ds1/VirtualSynchManager.java
- it.unitn.ds1.VirtualSynchManager
- it.unitn.ds1.VirtualSynchManager$CrashReportMsg
- it.unitn.ds1.VirtualSynchManager$JoinNodeMsg
-it/unitn/ds1/VirtualSynchActor.java
- it.unitn.ds1.VirtualSynchActor
- it.unitn.ds1.VirtualSynchActor$ChatMsg
- it.unitn.ds1.VirtualSynchActor$CrashMsg
- it.unitn.ds1.VirtualSynchActor$CrashType
- it.unitn.ds1.VirtualSynchActor$FlushTimeoutMsg
- it.unitn.ds1.VirtualSynchActor$JoinGroupMsg
- it.unitn.ds1.VirtualSynchActor$RecoveryMsg
- it.unitn.ds1.VirtualSynchActor$SendChatMsg
- it.unitn.ds1.VirtualSynchActor$StableChatMsg
- it.unitn.ds1.VirtualSynchActor$StableTimeoutMsg
- it.unitn.ds1.VirtualSynchActor$ViewChangeMsg
- it.unitn.ds1.VirtualSynchActor$ViewFlushMsg
+it/unitn/ds1/Messages.java
+ it.unitn.ds1.Messages
+ it.unitn.ds1.Messages$TopologyMessage
+it/unitn/ds1/ClientActor.java
+ it.unitn.ds1.ClientActor
+it/unitn/ds1/CacheActor.java
+ it.unitn.ds1.CacheActor
+ it.unitn.ds1.CacheActor$Type
+it/unitn/ds1/DatabaseActor.java
+ it.unitn.ds1.DatabaseActor
+it/unitn/ds1/CacheManager.java
+ it.unitn.ds1.CacheManager

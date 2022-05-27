@@ -13,6 +13,9 @@ public class ClientActor extends AbstractActor {
     this.l2Caches = l2Caches;
   }
 
+  static public Props props(List<ActorRef> l2Caches) {
+    return Props.create(ClientActor.class, ()->new ClientActor(l2Caches));
+  }
   // Here we define the mapping between the received message types
   // and our actor methods
   @Override

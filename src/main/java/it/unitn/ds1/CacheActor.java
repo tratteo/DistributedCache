@@ -19,16 +19,27 @@ public class CacheActor extends AbstractActor {
   private ActorRef parent;
   private List<ActorRef> children;
   private  Type type;
-  public CacheActor(Type type, ActorRef parent, List<ActorRef> children){
+  public CacheActor(Type type){
     this.type = type;
-    this.parent = parent;
-    this.children= children;
   }
+
+  static public Props props(Type type) {
+    return Props.create(CacheActor.class, ()->new CacheActor(type));
+  }
+
+  private void onTopologyMessage(Messages.TopologyMessage message){
+    System.out.println(getSelf().path().name()+" received topology");
+    this.parent = message.parent;
+    this.children = message.children;
+  }
+
   // Here we define the mapping between the received message types
   // and our actor methods
   @Override
   public Receive createReceive() {
     return receiveBuilder()
+            .match(Messages.TopologyMessage.class, this::onTopologyMessage)
             .build();
+
   }
 }
