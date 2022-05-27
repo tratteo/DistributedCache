@@ -1,5 +1,6 @@
 package it.unitn.ds1;
 
+import akka.actor.Actor;
 import akka.actor.ActorRef;
 
 import java.io.Serializable;
@@ -16,4 +17,38 @@ public class Messages {
             this.parent = parent;
         }
     }
+    public static class OperationResultMessage implements Serializable {
+        public final int key;
+        public final int value;
+        public final ActorRef client;
+        public OperationResultMessage(int key,ActorRef client, int value) {
+            this.key = key;
+            this.value = value;
+            this.client = client;
+        }
+    }
+    public static class WriteMessage implements Serializable {
+        public final int key;
+        public final int value;
+        private final boolean isCritical;
+        public  final ActorRef client;
+        public WriteMessage(int key, int value,ActorRef client, boolean isCritical) {
+            this.key = key;
+            this.value = value;
+            this.client = client;
+            this.isCritical = isCritical;
+
+        }
+    }
+    public static class ReadMessage implements Serializable {
+        public final int key;
+        public  final ActorRef client;
+        private final boolean isCritical;
+        public ReadMessage(int key, ActorRef client, boolean isCritical) {
+            this.key = key;
+            this.client = client;
+            this.isCritical = isCritical;
+        }
+    }
+
 }

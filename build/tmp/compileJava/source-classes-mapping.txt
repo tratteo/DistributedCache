@@ -1,12 +1,16 @@
+it/unitn/ds1/DatabaseActor.java
+ it.unitn.ds1.DatabaseActor
 it/unitn/ds1/Messages.java
  it.unitn.ds1.Messages
+ it.unitn.ds1.Messages$OperationResultMessage
+ it.unitn.ds1.Messages$ReadMessage
  it.unitn.ds1.Messages$TopologyMessage
-it/unitn/ds1/ClientActor.java
- it.unitn.ds1.ClientActor
+ it.unitn.ds1.Messages$WriteMessage
 it/unitn/ds1/CacheActor.java
  it.unitn.ds1.CacheActor
  it.unitn.ds1.CacheActor$Type
-it/unitn/ds1/DatabaseActor.java
- it.unitn.ds1.DatabaseActor
+it/unitn/ds1/ClientActor.java
+ it.unitn.ds1.ClientActor
+ it.unitn.ds1.ClientActor$OperationMessage
 it/unitn/ds1/CacheManager.java
  it.unitn.ds1.CacheManager

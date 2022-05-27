@@ -12,6 +12,7 @@ import java.util.concurrent.TimeUnit;
 
 public class DatabaseActor extends AbstractActor {
 
+  public static int KEYS = 10;
   private List<ActorRef> l1Caches;
   private Dictionary<Integer, Integer> database;
 
@@ -20,7 +21,7 @@ public class DatabaseActor extends AbstractActor {
   }
   private void populateDatabase(){
     database = new Hashtable<>();
-    for(int i = 0; i < 10; i++){
+    for(int i = 0; i < KEYS; i++){
       database.put(i, i);
     }
   }
@@ -65,7 +66,12 @@ public class DatabaseActor extends AbstractActor {
   public Receive createReceive() {
     return receiveBuilder()
             .match(Messages.TopologyMessage.class, this::onTopologyMessage)
+            .match(Messages.ReadMessage.class, this::onReadMessage)
             .build();
 
+  }
+
+  private void onReadMessage(Messages.ReadMessage msg) {
+    getSender().tell(new Messages.OperationResultMessage(msg.key, msg.client, database.get(msg.key)), getSelf());
   }
 }

@@ -10,7 +10,7 @@ import java.util.List;
 
 
 public class CacheManager {
-  final static int N_CLIENTS = 2;
+  final static int N_CLIENTS = 1;
   final static int N_L1 = 2;
   final static int N_L2 = 2;
 
@@ -42,6 +42,7 @@ public class CacheManager {
       clients.add(system.actorOf(ClientActor.props(l2Caches)));
     }
 
+    inputContinue();
     // system shutdown
     system.terminate();
   }

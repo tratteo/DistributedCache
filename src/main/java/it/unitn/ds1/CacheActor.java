@@ -1,14 +1,10 @@
 package it.unitn.ds1;
 
 import akka.actor.AbstractActor;
-import akka.actor.Actor;
 import akka.actor.ActorRef;
 import akka.actor.Props;
-import scala.concurrent.duration.Duration;
 
-import java.io.Serializable;
 import java.util.*;
-import java.util.concurrent.TimeUnit;
 
 public class CacheActor extends AbstractActor {
   public enum Type{
@@ -18,9 +14,11 @@ public class CacheActor extends AbstractActor {
 
   private ActorRef parent;
   private List<ActorRef> children;
+  private Hashtable<Integer, Integer> cache;
   private  Type type;
   public CacheActor(Type type){
     this.type = type;
+    cache = new Hashtable<>();
   }
 
   static public Props props(Type type) {
@@ -39,7 +37,28 @@ public class CacheActor extends AbstractActor {
   public Receive createReceive() {
     return receiveBuilder()
             .match(Messages.TopologyMessage.class, this::onTopologyMessage)
+            .match(Messages.ReadMessage.class, this::onReadMessage)
+            .match(Messages.OperationResultMessage.class, this::onOperationResultMessage)
             .build();
+
+  }
+
+  private void onOperationResultMessage(Messages.OperationResultMessage msg) {
+      msg.client.tell(msg, getSelf());
+      cache.put(msg.key, msg.value);
+      System.out.println(getSelf().path().name()+" updated key "+msg.key);
+  }
+
+  private void onReadMessage(Messages.ReadMessage msg) {
+    if(cache.containsKey(msg.key)){
+      Messages.OperationResultMessage res = new Messages.OperationResultMessage(msg.key, getSender(), cache.get(msg.key));
+      getSender().tell(res, getSelf());
+      System.out.println(getSelf().path().name()+" cache hit for key "+msg.key);
+    }
+    else {
+      parent.tell(msg, getSelf());
+      System.out.println(getSelf().path().name()+" cache miss for key "+msg.key);
+    }
 
   }
 }
