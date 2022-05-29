@@ -5,4 +5,6 @@ public class Configuration {
     public static final int N_CLIENTS = 1;
     public static final int N_L1 = 2;
     public static final int N_L2_L1 = 2;
+    public static final int TIMEOUT = 2000;
+    public static final int RECOVERY_TIME = 6000;
 }

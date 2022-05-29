@@ -1,21 +1,25 @@
 package it.unitn.ds1;
 
 import akka.actor.ActorRef;
+import scala.concurrent.duration.Duration;
 
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 public class Messages {
     public static class TopologyMessage implements Serializable {
         public final List<ActorRef> children;
         public final ActorRef parent;
+        public final ActorRef database;
 
-        public TopologyMessage(ActorRef parent, List<ActorRef> children) {
+        public TopologyMessage(ActorRef parent, List<ActorRef> children, ActorRef database) {
             this.children = children != null ? Collections.unmodifiableList(new ArrayList<>(children)) : null;
             this.parent = parent;
+            this.database = database;
         }
     }
 
@@ -97,5 +101,24 @@ public class Messages {
             return String.format("[%s] REFILL -> {%d, %d}", id, key, value);
         }
     }
+/*
+    private void onCrashMsg(CrashMsg msg) {
+        nextCrash = msg.nextCrash;
+        nextCrashAfter = msg.nextCrashAfter;
+        flushes.clear();
+        proposedView.clear();
+        deferredMsgSet.clear();
+    }*/
+
+    public static class Timeout implements Serializable {
+        public Serializable msg;
+
+        public Timeout(Serializable msg){
+            this.msg = msg;
+        }
+
+    }
+
+    public static class RecoveryMessage implements Serializable {}
 
 }

@@ -4,6 +4,7 @@ import akka.actor.AbstractActor;
 import akka.actor.ActorRef;
 import akka.actor.Cancellable;
 import akka.actor.Props;
+import akka.util.Timeout;
 import it.unitn.ds1.Configuration;
 import it.unitn.ds1.Messages;
 import scala.concurrent.duration.Duration;
@@ -17,14 +18,16 @@ import java.util.concurrent.TimeUnit;
 public class ClientActor extends AbstractActor {
     private List<ActorRef> l2Caches;
     private Random random;
+    private ActorRef database;
 
-    public ClientActor(List<ActorRef> l2Caches) {
+    public ClientActor(List<ActorRef> l2Caches, ActorRef database) {
         this.l2Caches = l2Caches;
         random = new Random();
+        this.database = database;
     }
 
-    static public Props props(List<ActorRef> l2Caches) {
-        return Props.create(ClientActor.class, () -> new ClientActor(l2Caches));
+    static public Props props(List<ActorRef> l2Caches, ActorRef database) {
+        return Props.create(ClientActor.class, () -> new ClientActor(l2Caches, database));
     }
 
     @Override
@@ -44,7 +47,7 @@ public class ClientActor extends AbstractActor {
 
     @Override
     public Receive createReceive() {
-        return receiveBuilder().match(OperationNotifyMessage.class, this::onOperationNotifyMessage).match(Messages.OperationResultMessage.class, this::onOperationMessageResult).build();
+        return receiveBuilder().match(OperationNotifyMessage.class, this::onOperationNotifyMessage).match(Messages.OperationResultMessage.class, this::onOperationMessageResult).match(Messages.Timeout.class, this::onTimeout).build();
 
     }
 
@@ -65,14 +68,25 @@ public class ClientActor extends AbstractActor {
     }
 
     private void performTotallyRandomOperation() {
+
         if (random.nextDouble() < 0.25) {
             ActorRef cache = getRandomL2Cache();
-            cache.tell(new Messages.WriteMessage(UUID.randomUUID(), random.nextInt(Configuration.DATABASE_KEYS), random.nextInt(1000), false), getSelf());
 
+            //Check if L2cache is crashed or not
+            //if crashed or timeout, select another L2cache
+            Serializable msg = new Messages.WriteMessage(UUID.randomUUID(), random.nextInt(Configuration.DATABASE_KEYS), random.nextInt(1000), false);
+            cache.tell(msg, getSelf());
+            //setTimeout(Configuration.TIMEOUT, msg);
         }
         else {
             ActorRef cache = getRandomL2Cache();
-            cache.tell(new Messages.ReadMessage(UUID.randomUUID(), random.nextInt(Configuration.DATABASE_KEYS), false), getSelf());
+
+            //Check if L2cache is crashed or not
+            //if crashed or timeout, select another L2cache
+
+            Serializable msg = new Messages.ReadMessage(UUID.randomUUID(), random.nextInt(Configuration.DATABASE_KEYS), false);
+            cache.tell(msg, getSelf());
+            //setTimeout(Configuration.TIMEOUT, msg);
         }
     }
 
@@ -82,5 +96,25 @@ public class ClientActor extends AbstractActor {
     private static class OperationNotifyMessage implements Serializable {
         public OperationNotifyMessage() {
         }
+    }
+
+    // schedule a Timeout message in specified time
+    void setTimeout(int time, Serializable msg) {
+        getContext().system().scheduler().scheduleOnce(
+                Duration.create(time, TimeUnit.MILLISECONDS),
+                getSelf(),
+                new Messages.Timeout(msg), // the message to send
+                getContext().system().dispatcher(),
+                getSelf()
+        );
+    }
+
+
+    public void onTimeout(Messages.Timeout msg) {
+        System.out.println("Timeout. Choose another L2cache.");
+        ActorRef cache = getRandomL2Cache();
+        cache.tell(msg.msg, getSelf());
+        //setTimeout(Configuration.TIMEOUT, msg.msg);
+        System.out.flush();
     }
 }
