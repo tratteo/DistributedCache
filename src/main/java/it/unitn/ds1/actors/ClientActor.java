@@ -66,7 +66,9 @@ public class ClientActor extends AbstractActor {
 
     private void performTotallyRandomOperation() {
         if (random.nextDouble() < 0.25) {
-            //TODO perform write
+            ActorRef cache = getRandomL2Cache();
+            cache.tell(new Messages.WriteMessage(UUID.randomUUID(), random.nextInt(Configuration.DATABASE_KEYS), random.nextInt(1000), false), getSelf());
+
         }
         else {
             ActorRef cache = getRandomL2Cache();

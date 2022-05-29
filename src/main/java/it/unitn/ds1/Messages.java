@@ -79,4 +79,23 @@ public class Messages {
         }
     }
 
+    //necessary to propagate the update towards all caches
+    public static class RefillMessage implements Serializable {
+        public final int key;
+        public final UUID id;
+        public final int value;
+
+
+        public RefillMessage(UUID id, int key, int value) {
+            this.key = key;
+            this.id = id;
+            this.value = value;
+        }
+
+        @Override
+        public String toString() {
+            return String.format("[%s] REFILL -> {%d, %d}", id, key, value);
+        }
+    }
+
 }

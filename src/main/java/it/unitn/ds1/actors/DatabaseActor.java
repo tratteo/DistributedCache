@@ -50,7 +50,22 @@ public class DatabaseActor extends AbstractActor {
      * Process the write request
      **/
     private void onWriteMessage(Messages.WriteMessage msg) {
-        //TODO
+        //update our database
+        database.put(msg.key, msg.value);
+        System.out.format("[%s] | %s %n", getSelf().path().name(), msg.toString());
+        System.out.flush();
+
+        //send the update to all L1 caches
+        for(ActorRef l1cache: l1Caches){
+            l1cache.tell(new Messages.RefillMessage(msg.id, msg.key, msg.value), ActorRef.noSender());
+
+        }
+
+        //send back the message to the sender
+        getSender().tell(new Messages.OperationResultMessage(msg.id, Messages.OperationResultMessage.Operation.Read, msg.key, database.get(msg.key)), getSelf());
+
+
+
     }
 
     /**

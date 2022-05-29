@@ -39,11 +39,17 @@ public class CacheActor extends AbstractActor {
                 .match(Messages.ReadMessage.class, this::onReadMessage)
                 .match(Messages.WriteMessage.class, this::onWriteMessage)
                 .match(Messages.OperationResultMessage.class, this::onOperationResultMessage)
+                .match(Messages.RefillMessage.class, this::onRefillMessage)
                 .build();
     }
 
     private void onWriteMessage(Messages.WriteMessage msg) {
-        //TODO
+        //Send the message to the parent
+        ActorRef issuer = getSender();
+        activeRequests.put(msg.id, issuer);
+        System.out.format("WRITE Request from [%s] | %s %n", getSelf().path().name(), msg.toString());
+        parent.tell(msg, getSelf());
+        System.out.flush();
     }
 
     private void onOperationResultMessage(Messages.OperationResultMessage msg) {
@@ -70,9 +76,24 @@ public class CacheActor extends AbstractActor {
         // allows the cache to respond to the issuer of the request on the result is received
         else {
             activeRequests.put(msg.id, issuer);
-            parent.tell(msg, getSelf());
             System.out.format("[%s] MISS | %s %n", getSelf().path().name(), msg.toString());
+            parent.tell(msg, getSelf());
             System.out.flush();
+        }
+
+    }
+
+    private void onRefillMessage(Messages.RefillMessage msg){
+        // Update our cache
+        cache.put(msg.key, msg.value);
+        System.out.format("[%s] | %s %n", getSelf().path().name(), msg.toString());
+        System.out.flush();
+
+        //check if the cache has children or not, i.e. if it is a L1 or L2 cache
+        if (children != null){
+            for(ActorRef l2cache: children){
+                l2cache.tell(new Messages.RefillMessage(msg.id, msg.key, msg.value), ActorRef.noSender());
+            }
         }
 
     }
