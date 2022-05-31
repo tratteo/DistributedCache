@@ -58,6 +58,18 @@ public class DatabaseActor extends AbstractActor {
         System.out.format("[%s] | %s %n", getSelf().path().name(), msg.toString());
         System.out.flush();
 
+        //if the write operation is critical, then it is necessary to ensure that before updating no cache holds old values of item
+        //so, we have to remove the item with old value from every cache before refill
+        if (msg.isCritical){
+            Serializable removeMsg = new Messages.RemoveMessage(msg.id, msg.key, msg.value);
+            for(ActorRef l1cache: l1Caches){
+                //check if the l2cache is crashed or not
+                //if crashed or timeout, add the msg on the active req and retry after some milliseconds
+                l1cache.tell(removeMsg, ActorRef.noSender());
+                //setTimeout(Configuration.TIMEOUT, removeMsg);
+            }
+        }
+
         Serializable refillMsg = new Messages.RefillMessage(msg.id, msg.key, msg.value);
         //send the update to all L1 caches
         for(ActorRef l1cache: l1Caches){
@@ -68,13 +80,14 @@ public class DatabaseActor extends AbstractActor {
 
         //send back the message to the sender
         getSender().tell(new Messages.OperationResultMessage(msg.id, Messages.OperationResultMessage.Operation.Write, msg.key, database.get(msg.key)), getSelf());
-        setTimeout(Configuration.TIMEOUT, refillMsg);
+        //setTimeout(Configuration.TIMEOUT, refillMsg);
     }
 
     /**
      * Process the read request
      **/
     private void onReadMessage(Messages.ReadMessage msg) {
+        //operation is the same in both normal and critical version
         System.out.format("[%s] | %s %n", getSelf().path().name(), msg.toString());
         System.out.flush();
         getSender().tell(new Messages.OperationResultMessage(msg.id, Messages.OperationResultMessage.Operation.Read, msg.key, database.get(msg.key)), getSelf());
