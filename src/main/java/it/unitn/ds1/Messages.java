@@ -101,14 +101,6 @@ public class Messages {
             return String.format("[%s] REFILL -> {%d, %d}", id, key, value);
         }
     }
-/*
-    private void onCrashMsg(CrashMsg msg) {
-        nextCrash = msg.nextCrash;
-        nextCrashAfter = msg.nextCrashAfter;
-        flushes.clear();
-        proposedView.clear();
-        deferredMsgSet.clear();
-    }*/
 
     public static class Timeout implements Serializable {
         public Serializable msg;
@@ -120,5 +112,25 @@ public class Messages {
     }
 
     public static class RecoveryMessage implements Serializable {}
+
+    //necessary for critical write, as it is necessary to ensure that before updating no cache holds old values of item
+    public static class RemoveMessage implements Serializable {
+        public final int key;
+        public final UUID id;
+        public final int value;
+
+
+        public RemoveMessage(UUID id, int key, int value) {
+            this.key = key;
+            this.id = id;
+            this.value = value;
+        }
+
+        @Override
+        public String toString() {
+            return String.format("[%s] REMOVE -> {%d, %d}", id, key, value);
+        }
+    }
+
 
 }

@@ -50,16 +50,19 @@ public class CacheActor extends AbstractActor {
                 .match(Messages.OperationResultMessage.class, this::onOperationResultMessage)
                 .match(Messages.RefillMessage.class, this::onRefillMessage)
                 .match(Messages.Timeout.class, this::onTimeout)
+                .match(Messages.RemoveMessage.class, this::onRemoveMessage)
                 .build();
     }
 
     private void onWriteMessage(Messages.WriteMessage msg) {
         //Send the message to the parent
         ActorRef issuer = getSender();
-        if (random.nextDouble() < 0.05){
+
+        if (random.nextDouble() < 0.1){
             crash();
             return;
         }
+
         activeRequests.put(msg.id, issuer);
         System.out.format("WRITE Request from [%s] | %s %n", getSelf().path().name(), msg.toString());
 
@@ -86,32 +89,46 @@ public class CacheActor extends AbstractActor {
     private void onReadMessage(Messages.ReadMessage msg) {
         ActorRef issuer = getSender();
 
-        if (random.nextDouble() < 0.05){
+        if (random.nextDouble() < 0.1){
             crash();
             return;
         }
-        // Cache hit, respond immediately to the requester (sender), client or cache
-        if (cache.containsKey(msg.key)) {
-            Messages.OperationResultMessage res = new Messages.OperationResultMessage(msg.id, Messages.OperationResultMessage.Operation.Read, msg.key, cache.get(msg.key));
-            issuer.tell(res, getSelf());
-            System.out.format("[%s] HIT | %s %n", getSelf().path().name(), msg.toString());
-            System.out.flush();
-        }
-        // Cache miss, add the request to the active requests and forward it to our parent. Keeping a list of all the pending requests,
-        // allows the cache to respond to the issuer of the request on the result is received
-        else {
+
+        //Check if the operation is critical or not
+        if (msg.isCritical){
+            //if it is critical, then send the message regardless of cached item
             activeRequests.put(msg.id, issuer);
-            System.out.format("[%s] MISS | %s %n", getSelf().path().name(), msg.toString());
-
-            //check if L1cache is crashed, or not
-            //if crashed or timeout, send the message to database
-
+            System.out.format("[%s] CRITICAL READ | %s %n", getSelf().path().name(), msg.toString());
+            System.out.flush();
             parent.tell(msg, getSelf());
+
+        }else{
+            // Cache hit, respond immediately to the requester (sender), client or cache
+            if (cache.containsKey(msg.key)) {
+                Messages.OperationResultMessage res = new Messages.OperationResultMessage(msg.id, Messages.OperationResultMessage.Operation.Read, msg.key, cache.get(msg.key));
+                issuer.tell(res, getSelf());
+                System.out.format("[%s] HIT | %s %n", getSelf().path().name(), msg.toString());
+                System.out.flush();
+            }
+            // Cache miss, add the request to the active requests and forward it to our parent. Keeping a list of all the pending requests,
+            // allows the cache to respond to the issuer of the request on the result is received
+            else {
+                activeRequests.put(msg.id, issuer);
+                System.out.format("[%s] MISS | %s %n", getSelf().path().name(), msg.toString());
+                System.out.flush();
+                //check if L1cache is crashed, or not
+                //if crashed or timeout, send the message to database
+
+                parent.tell(msg, getSelf());
             /*if (parent != database) {
                 setTimeout(Configuration.TIMEOUT, msg);
             }*/
-            System.out.flush();
+                //System.out.flush();
+            }
         }
+
+
+
 
     }
 
@@ -126,17 +143,32 @@ public class CacheActor extends AbstractActor {
             for(ActorRef l2cache: children){
                 //check if the l2cache is crashed or not
                 //if crashed or timeout, add the msg on the active req and retry after some milliseconds
-                l2cache.tell(new Messages.RefillMessage(msg.id, msg.key, msg.value), ActorRef.noSender());
+                l2cache.tell(msg, ActorRef.noSender());
                 //setTimeout(Configuration.TIMEOUT);
             }
         }
 
+
     }
 
+    private void onRemoveMessage(Messages.RemoveMessage msg){
+        // remove the item from cache
+        //System.out.println("BEFORE REMOVE:"+msg.key+" "+msg.value+" "+cache.containsKey(msg.key));
+        cache.remove(msg.key);
+        //System.out.println("AFTER REMOVE:" + cache.containsKey(msg.key));
+        System.out.format("[%s] | %s %n", getSelf().path().name(), msg.toString());
+        System.out.flush();
 
+        //check if the cache has children or not, i.e. if it is a L1 or L2 cache
+        if (children != null){
+            for(ActorRef l1cache: children){
+                //check if the l2cache is crashed or not
+                //if crashed or timeout, add the msg on the active req and retry after some milliseconds
+                l1cache.tell(msg, ActorRef.noSender());
+            }
+        }
 
-
-
+    }
 
 
     // emulate a crash and a recovery in a given time

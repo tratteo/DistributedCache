@@ -69,12 +69,14 @@ public class ClientActor extends AbstractActor {
 
     private void performTotallyRandomOperation() {
 
+        boolean critical = (random.nextDouble() < 0.5);
+
         if (random.nextDouble() < 0.25) {
             ActorRef cache = getRandomL2Cache();
 
             //Check if L2cache is crashed or not
             //if crashed or timeout, select another L2cache
-            Serializable msg = new Messages.WriteMessage(UUID.randomUUID(), random.nextInt(Configuration.DATABASE_KEYS), random.nextInt(1000), false);
+            Serializable msg = new Messages.WriteMessage(UUID.randomUUID(), random.nextInt(Configuration.DATABASE_KEYS), random.nextInt(1000), critical);
             cache.tell(msg, getSelf());
             //setTimeout(Configuration.TIMEOUT, msg);
         }
@@ -84,7 +86,7 @@ public class ClientActor extends AbstractActor {
             //Check if L2cache is crashed or not
             //if crashed or timeout, select another L2cache
 
-            Serializable msg = new Messages.ReadMessage(UUID.randomUUID(), random.nextInt(Configuration.DATABASE_KEYS), false);
+            Serializable msg = new Messages.ReadMessage(UUID.randomUUID(), random.nextInt(Configuration.DATABASE_KEYS), critical);
             cache.tell(msg, getSelf());
             //setTimeout(Configuration.TIMEOUT, msg);
         }
