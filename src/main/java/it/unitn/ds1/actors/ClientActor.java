@@ -14,11 +14,13 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 public class ClientActor extends AgentActor {
-    private ArrayList<ActorRef> l2Caches;
 
+    private final ArrayList<ActorRef> latestRecovers;
+    private ArrayList<ActorRef> l2Caches;
 
     public ClientActor() {
         super();
+        latestRecovers = new ArrayList<>();
     }
 
     static public Props props() {
@@ -30,7 +32,7 @@ public class ClientActor extends AgentActor {
         // Schedule an internal operation notifier at startup
         Cancellable cancellable = getContext().system().scheduler().scheduleOnce(
                 //Duration.create(random.nextInt(5000) + 300, TimeUnit.MILLISECONDS),
-                Duration.create(1000, TimeUnit.MILLISECONDS), getSelf(), new OperationNotifyMessage(), getContext().system().dispatcher(), ActorRef.noSender());
+                Duration.create(Configuration.CLIENT_REQUEST_MAX_TIME + Configuration.CLIENT_REQUEST_MIN_TIME, TimeUnit.MILLISECONDS), getSelf(), new OperationNotifyMessage(), getContext().system().dispatcher(), ActorRef.noSender());
     }
 
     /**
@@ -43,10 +45,12 @@ public class ClientActor extends AgentActor {
     // region Message Handlers
 
     private void onOperationMessageResult(Messages.OperationResultMessage msg) {
-        System.out.format("[%s] | %s %n%n", getSelf().path().name(), msg.toString());
-        System.out.flush();
-        // Schedule new operation
-        getContext().system().scheduler().scheduleOnce(Duration.create(1000, TimeUnit.MILLISECONDS), getSelf(), new OperationNotifyMessage(), getContext().system().dispatcher(), ActorRef.noSender());
+        printFormatted("%s%n", msg);
+        getContext()
+                .system()
+                .scheduler()
+                .scheduleOnce(Duration.create(random.nextInt(Configuration.CLIENT_REQUEST_MAX_TIME - Configuration.CLIENT_REQUEST_MIN_TIME) + Configuration.CLIENT_REQUEST_MIN_TIME, TimeUnit.MILLISECONDS), getSelf(),
+                              new OperationNotifyMessage(), getContext().system().dispatcher(), ActorRef.noSender());
     }
 
     private void onOperationNotifyMessage(OperationNotifyMessage message) {
@@ -57,17 +61,18 @@ public class ClientActor extends AgentActor {
 
     @Override
     public void onTimeout(Messages.IdentifiableMessage msg, ActorRef dest) {
-        l2Caches.remove(dest);
+        if (!latestRecovers.contains(dest)) {
+            l2Caches.remove(dest);
+        }
+        latestRecovers.clear();
         ActorRef newCache = getRandomL2Cache();
-        System.out.format("[%s] | Removed %s as it seems dead X(, targeting new cache %s %n", getSelf().path().name(), dest.path().name(), newCache.path().name());
-        sendWithTimeout(msg, newCache);
-
+        printFormatted("Removed %s as it seems dead X(, targeting new cache %s", dest.path().name(), newCache.path().name());
+        sendWithTimeout(msg, newCache, Configuration.CLIENT_TIMEOUT);
     }
 
     //endregion
 
     private void performTotallyRandomOperation() {
-
         boolean critical = random.nextDouble() < Configuration.P_CRITICAL;
         UUID requestId = UUID.randomUUID();
         Messages.IdentifiableMessage message;
@@ -78,9 +83,9 @@ public class ClientActor extends AgentActor {
         else {
             message = new Messages.ReadMessage(requestId, random.nextInt(Configuration.DATABASE_KEYS), critical);
         }
-        System.out.format("[%s] | Requesting %s %n", getSelf().path().name(), message);
-        System.out.flush();
-        sendWithTimeout(message, cache);
+        System.out.println();
+        printFormatted("Requesting %s", message);
+        sendWithTimeout(message, cache, Configuration.CLIENT_TIMEOUT);
     }
 
     @Override
@@ -98,10 +103,10 @@ public class ClientActor extends AgentActor {
 
     private void onCacheRecoveryMessage(Messages.RecoveryMessage msg) {
         ActorRef cache = getSender();
+        latestRecovers.add(cache);
         if (!l2Caches.contains(cache)) {
             l2Caches.add(cache);
-            System.out.format("[%s] cache %s recovered! :D %n", getSelf().path().name(), cache.path().name());
-            System.out.flush();
+            printFormatted("Cache %s recovered! Rebuilding topology :D ", cache.path().name());
         }
     }
 

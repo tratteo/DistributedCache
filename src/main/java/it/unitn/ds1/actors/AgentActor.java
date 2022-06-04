@@ -3,7 +3,6 @@ package it.unitn.ds1.actors;
 import akka.actor.AbstractActor;
 import akka.actor.ActorRef;
 import akka.japi.pf.ReceiveBuilder;
-import it.unitn.ds1.Configuration;
 import it.unitn.ds1.Messages;
 import scala.concurrent.duration.Duration;
 
@@ -28,21 +27,20 @@ public abstract class AgentActor extends AbstractActor {
     /**
      * Send a message and add it to the timeout queue
      **/
-    protected void sendWithTimeout(Messages.IdentifiableMessage msg, ActorRef dest) {
+    protected void sendWithTimeout(Messages.IdentifiableMessage msg, ActorRef dest, int timeout) {
         if (!timeoutMessages.contains(msg.id)) {
             timeoutMessages.add(msg.id);
         }
         dest.tell(msg, getSelf());
-        getContext().system().scheduler().scheduleOnce(Duration.create(Configuration.TIMEOUT, TimeUnit.MILLISECONDS), getSelf(), new Messages.TimeoutMessage(msg, dest), getContext().system().dispatcher(), getSelf());
+        getContext().system().scheduler().scheduleOnce(Duration.create(timeout, TimeUnit.MILLISECONDS), getSelf(), new Messages.TimeoutMessage(msg, dest), getContext().system().dispatcher(), getSelf());
     }
-
 
     private void onTimeoutMessage(Messages.TimeoutMessage msg) {
         if (timeoutMessages.contains(msg.msg.id)) {
+            timeoutMessages.remove(msg.msg.id);
             onTimeout(msg.msg, msg.dest);
         }
     }
-
 
     protected abstract void onTimeout(Messages.IdentifiableMessage msg, ActorRef dest);
 
@@ -54,7 +52,13 @@ public abstract class AgentActor extends AbstractActor {
 
     private void onAckMessage(Messages.AckMessage msg) {
         // If an ack has been received, that means that the target of the request was active, reset timeout
+        //printFormatted("ACK! O.O from %s", getSender().path().name());
         timeoutMessages.remove(msg.id);
+    }
+
+    protected void printFormatted(String message, Object... args) {
+        System.out.format("%s %s %n", String.format("%-10s |", getSelf().path().name()), String.format(message, args));
+        System.out.flush();
     }
 
     @Override

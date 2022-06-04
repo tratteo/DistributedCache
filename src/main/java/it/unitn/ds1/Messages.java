@@ -15,12 +15,22 @@ public class Messages {
         public IdentifiableMessage(UUID id) {
             this.id = id;
         }
+
+        @Override
+        public String toString() {
+            return String.format("{id: %s} - ", id);
+        }
     }
 
     public static class AckMessage extends IdentifiableMessage {
 
         public AckMessage(UUID id) {
             super(id);
+        }
+
+        @Override
+        public String toString() {
+            return super.toString() + "ACK";
         }
     }
 
@@ -58,7 +68,7 @@ public class Messages {
 
         @Override
         public String toString() {
-            return String.format("[%s] %s -> {%d, %d}", id, operation.toString(), key, value);
+            return super.toString() + String.format("%s result -> {%d, %d}", operation.toString(), key, value);
         }
 
         public enum Operation {
@@ -80,7 +90,7 @@ public class Messages {
 
         @Override
         public String toString() {
-            return String.format("[%s] W | CRITICAL: %s -> {%d, %d}", id, isCritical, key, value);
+            return super.toString() + String.format("WRITE, critical: %s -> {%d, %d}", isCritical, key, value);
         }
     }
 
@@ -97,7 +107,7 @@ public class Messages {
 
         @Override
         public String toString() {
-            return String.format("[%s] R | CRITICAL: %s -> %d", id, isCritical, key);
+            return super.toString() + String.format("READ, critical: %s -> {%d}", isCritical, key);
         }
     }
 
@@ -115,7 +125,7 @@ public class Messages {
 
         @Override
         public String toString() {
-            return String.format("[%s] REFILL -> {%d, %d}", id, key, value);
+            return super.toString() + String.format("REFILL -> {%d, %d}", key, value);
         }
     }
 
@@ -128,13 +138,16 @@ public class Messages {
             this.dest = dest;
         }
 
+        @Override
+        public String toString() {
+            return String.format("TIMEOUT %s, of %s", msg.toString(), dest.path().name());
+        }
     }
 
     public static class RecoveryMessage implements Serializable {}
 
     public static class RemoveMessage extends IdentifiableMessage {
         public final int key;
-
 
         public RemoveMessage(UUID id, int key) {
             super(id);
@@ -143,7 +156,7 @@ public class Messages {
 
         @Override
         public String toString() {
-            return String.format("[%s] REMOVE -> {%d}", id, key);
+            return super.toString() + String.format("REMOVE -> {%d}", key);
         }
     }
 

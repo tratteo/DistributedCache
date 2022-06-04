@@ -43,7 +43,6 @@ public class CacheActor extends AgentActor {
                 .match(Messages.RemoveMessage.class, this::onRemoveMessage);
     }
 
-
     // region Message Handlers
     private void onClientsMessage(Messages.ClientsMessage msg) {
         this.clients = msg.clients;
@@ -57,27 +56,26 @@ public class CacheActor extends AgentActor {
 
     private void onWriteMessage(Messages.WriteMessage msg) {
         if (shouldCrash()) {
-            crash();
+            crash("Write");
             return;
         }
-
         //Send the message to the parent
         ActorRef issuer = getSender();
-        //We cannot crash here, send back to the issuer the ack
-        issuer.tell(new Messages.AckMessage(msg.id), getSelf());
         activeRequests.put(msg.id, issuer);
-        //        System.out.format("WRITE Request from [%s] | %s %n", getSelf().path().name(), msg);
-        //        System.out.flush();
-
-        sendWithTimeout(msg, parent);
+        sendWithTimeout(msg, parent, Configuration.TIMEOUT);
     }
 
     private void onOperationResultMessage(Messages.OperationResultMessage msg) {
+        if (shouldCrash()) {
+            crash("Result");
+            return;
+        }
         // Update our cache
         cache.put(msg.key, msg.value);
         // Forward back the message to the request issuer
         if (activeRequests.containsKey(msg.id)) {
             ActorRef issuer = activeRequests.get(msg.id);
+            issuer.tell(new Messages.AckMessage(msg.id), getSelf());
             issuer.tell(msg, getSelf());
             activeRequests.remove(msg.id);
         }
@@ -85,38 +83,33 @@ public class CacheActor extends AgentActor {
 
     private void onReadMessage(Messages.ReadMessage msg) {
         if (shouldCrash()) {
-            crash();
+            crash("Read");
             return;
         }
 
         ActorRef issuer = getSender();
-
-        //We cannot crash here, send back to the issuer the ack
-        issuer.tell(new Messages.AckMessage(msg.id), getSelf());
-
         //Check if the operation is critical or not
         if (msg.isCritical) {
             //if it is critical, then send the message regardless of cached item
             activeRequests.put(msg.id, issuer);
-            System.out.format("[%s] CRITICAL READ | %s %n", getSelf().path().name(), msg);
-            System.out.flush();
-            sendWithTimeout(msg, parent);
+            printFormatted("%s", msg);
+            sendWithTimeout(msg, parent, Configuration.TIMEOUT);
         }
         else {
             // Cache hit, respond immediately to the requester (sender), client or cache
             if (cache.containsKey(msg.key)) {
                 Messages.OperationResultMessage res = new Messages.OperationResultMessage(msg.id, Messages.OperationResultMessage.Operation.Read, msg.key, cache.get(msg.key));
+                printFormatted("(cache hit) %s", msg);
+                issuer.tell(new Messages.AckMessage(msg.id), getSelf());
                 issuer.tell(res, getSelf());
-                System.out.format("[%s] HIT | %s %n", getSelf().path().name(), msg);
-                System.out.flush();
+
             }
             // Cache miss, add the request to the active requests and forward it to our parent. Keeping a list of all the pending requests,
             // allows the cache to respond to the issuer of the request on the result is received
             else {
                 activeRequests.put(msg.id, issuer);
-                System.out.format("[%s] MISS | %s %n", getSelf().path().name(), msg);
-                System.out.flush();
-                sendWithTimeout(msg, parent);
+                printFormatted("(cache miss) %s", msg);
+                sendWithTimeout(msg, parent, Configuration.TIMEOUT);
             }
         }
 
@@ -124,6 +117,10 @@ public class CacheActor extends AgentActor {
     }
 
     private void onRefillMessage(Messages.RefillMessage msg) {
+        if (shouldCrash()) {
+            crash("Refill");
+            return;
+        }
         // Update our cache
         cache.put(msg.key, msg.value);
 
@@ -132,13 +129,14 @@ public class CacheActor extends AgentActor {
                 l2cache.tell(msg, getSelf());
             }
         }
-        System.out.format("[%s] | %s %n", getSelf().path().name(), msg);
-        System.out.flush();
-
-
+        //printFormatted("%s", msg);
     }
 
     private void onRemoveMessage(Messages.RemoveMessage msg) {
+        if (shouldCrash()) {
+            crash("Remove");
+            return;
+        }
         cache.remove(msg.key);
 
         if (children != null) {
@@ -146,9 +144,7 @@ public class CacheActor extends AgentActor {
                 l1cache.tell(msg, getSelf());
             }
         }
-        System.out.format("[%s] | %s %n", getSelf().path().name(), msg);
-        System.out.flush();
-
+        //printFormatted("%s", msg);
     }
 
     private void onRecoveryMessage(Messages.RecoveryMessage msg) {
@@ -156,8 +152,8 @@ public class CacheActor extends AgentActor {
         if (getSender() == getSelf()) {
             getContext().become(createReceive());
             Configuration.currentCrashes--;
-            System.out.format("[%s] Recovered! :D %n", getSelf().path().name());
-            System.out.flush();
+            Configuration.currentCrashes = Math.max(Configuration.currentCrashes, 0);
+            printFormatted("Recovered! :D ");
 
             Messages.RecoveryMessage recoveryMsg = new Messages.RecoveryMessage();
             if (children != null) {
@@ -173,16 +169,15 @@ public class CacheActor extends AgentActor {
         }
         else {
             parent = getSender();
-            System.out.format("[%s] parent %s recovered! :D %n", getSelf().path().name(), parent.path().name());
-            System.out.flush();
+            printFormatted("Parent %s recovered! Rebuilding topology :D", parent.path().name());
         }
     }
 
     @Override
     public void onTimeout(Messages.IdentifiableMessage msg, ActorRef dest) {
         parent = database;
-        System.out.format("[%s] | Removed %s as it seems dead X(, targeting %s %n", getSelf().path().name(), dest.path().name(), parent.path().name());
-        sendWithTimeout(msg, parent);
+        printFormatted("Removed %s as it seems dead X(, targeting %s ", dest.path().name(), parent.path().name());
+        sendWithTimeout(msg, parent, Configuration.TIMEOUT);
     }
 
     //endregion
@@ -194,16 +189,18 @@ public class CacheActor extends AgentActor {
     /**
      * Emulate a crash and setup a notifier to recover after a given time
      **/
-    void crash() {
+    void crash(String context) {
         getContext().become(crashed());
         cache.clear();
         activeRequests.clear();
         clearTimeoutsMessages();
         Configuration.currentCrashes++;
-        System.out.format("[%s] Crash! X( %n", getSelf().path().name());
-        System.out.flush();
-        getContext().system().scheduler().scheduleOnce(Duration.create(Configuration.RECOVERY_TIME, TimeUnit.MILLISECONDS), getSelf(), new Messages.RecoveryMessage(), // message sent to myself
-                                                       getContext().system().dispatcher(), getSelf());
+        printFormatted("Crash in context [%s]! X(", context, parent.path().name());
+        getContext()
+                .system()
+                .scheduler()
+                .scheduleOnce(Duration.create(random.nextInt(Configuration.RECOVERY_MAX_TIME - Configuration.RECOVERY_MIN_TIME) + Configuration.RECOVERY_MIN_TIME, TimeUnit.MILLISECONDS), getSelf(), new Messages.RecoveryMessage(),
+                              getContext().system().dispatcher(), getSelf());
     }
 
     /**

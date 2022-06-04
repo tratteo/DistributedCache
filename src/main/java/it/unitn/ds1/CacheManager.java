@@ -54,10 +54,12 @@ public class CacheManager {
             c.tell(clientsTopology, ActorRef.noSender());
         }
 
-        System.out.println("Topology created");
+        System.out.println("\nTOPOLOGY CREATED\n");
         System.out.flush();
+
         // Wait for termination
         inputContinue();
+
         system.terminate();
     }
 
