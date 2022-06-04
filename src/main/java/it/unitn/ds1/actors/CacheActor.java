@@ -1,78 +1,75 @@
 package it.unitn.ds1.actors;
 
-import akka.actor.AbstractActor;
 import akka.actor.ActorRef;
 import akka.actor.Props;
-import akka.util.Timeout;
+import akka.japi.pf.ReceiveBuilder;
 import it.unitn.ds1.Configuration;
 import it.unitn.ds1.Messages;
 import scala.concurrent.duration.Duration;
 
-import java.io.Serializable;
 import java.util.Hashtable;
 import java.util.List;
-import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
-public class CacheActor extends AbstractActor {
+public class CacheActor extends AgentActor {
     private final Hashtable<Integer, Integer> cache;
-    private final Random random;
-    private ActorRef database;
+    private final Hashtable<UUID, ActorRef> activeRequests;
     private ActorRef parent;
     private List<ActorRef> children;
-    private Hashtable<UUID, ActorRef> activeRequests;
-    //private boolean crashed;
+    private List<ActorRef> clients;
+    private ActorRef database;
 
     public CacheActor() {
+        super();
         cache = new Hashtable<>();
         activeRequests = new Hashtable<>();
-        random = new Random();
-        //crashed = false;
     }
 
     static public Props props() {
         return Props.create(CacheActor.class, CacheActor::new);
     }
 
-    private void onTopologyMessage(Messages.TopologyMessage message) {
-        this.parent = message.parent;
-        this.children = message.children;
-        this.database = message.database;
-    }
-
     @Override
-    public Receive createReceive() {
+    public ReceiveBuilder receiveBuilderFactory() {
         return receiveBuilder()
                 .match(Messages.TopologyMessage.class, this::onTopologyMessage)
                 .match(Messages.ReadMessage.class, this::onReadMessage)
                 .match(Messages.WriteMessage.class, this::onWriteMessage)
+                .match(Messages.ClientsMessage.class, this::onClientsMessage)
                 .match(Messages.OperationResultMessage.class, this::onOperationResultMessage)
                 .match(Messages.RefillMessage.class, this::onRefillMessage)
-                .match(Messages.Timeout.class, this::onTimeout)
-                .match(Messages.RemoveMessage.class, this::onRemoveMessage)
-                .build();
+                .match(Messages.RecoveryMessage.class, this::onRecoveryMessage)
+                .match(Messages.RemoveMessage.class, this::onRemoveMessage);
+    }
+
+
+    // region Message Handlers
+    private void onClientsMessage(Messages.ClientsMessage msg) {
+        this.clients = msg.clients;
+    }
+
+    protected void onTopologyMessage(Messages.TopologyMessage message) {
+        this.database = message.database;
+        this.parent = message.parent;
+        this.children = message.children;
     }
 
     private void onWriteMessage(Messages.WriteMessage msg) {
-        //Send the message to the parent
-        ActorRef issuer = getSender();
-
-        if (random.nextDouble() < 0.1){
+        if (shouldCrash()) {
             crash();
             return;
         }
 
+        //Send the message to the parent
+        ActorRef issuer = getSender();
+        //We cannot crash here, send back to the issuer the ack
+        issuer.tell(new Messages.AckMessage(msg.id), getSelf());
         activeRequests.put(msg.id, issuer);
-        System.out.format("WRITE Request from [%s] | %s %n", getSelf().path().name(), msg.toString());
+        //        System.out.format("WRITE Request from [%s] | %s %n", getSelf().path().name(), msg);
+        //        System.out.flush();
 
-        //check if L1cache is crashed, or not
-        //if crashed or timeout, send the message to database
-        parent.tell(msg, getSelf());
-        /*if (parent != database) {
-            setTimeout(Configuration.TIMEOUT, msg);
-        }*/
-        System.out.flush();
+        sendWithTimeout(msg, parent);
     }
 
     private void onOperationResultMessage(Messages.OperationResultMessage msg) {
@@ -87,137 +84,134 @@ public class CacheActor extends AbstractActor {
     }
 
     private void onReadMessage(Messages.ReadMessage msg) {
-        ActorRef issuer = getSender();
-
-        if (random.nextDouble() < 0.1){
+        if (shouldCrash()) {
             crash();
             return;
         }
 
+        ActorRef issuer = getSender();
+
+        //We cannot crash here, send back to the issuer the ack
+        issuer.tell(new Messages.AckMessage(msg.id), getSelf());
+
         //Check if the operation is critical or not
-        if (msg.isCritical){
+        if (msg.isCritical) {
             //if it is critical, then send the message regardless of cached item
             activeRequests.put(msg.id, issuer);
-            System.out.format("[%s] CRITICAL READ | %s %n", getSelf().path().name(), msg.toString());
+            System.out.format("[%s] CRITICAL READ | %s %n", getSelf().path().name(), msg);
             System.out.flush();
-            parent.tell(msg, getSelf());
-
-        }else{
+            sendWithTimeout(msg, parent);
+        }
+        else {
             // Cache hit, respond immediately to the requester (sender), client or cache
             if (cache.containsKey(msg.key)) {
                 Messages.OperationResultMessage res = new Messages.OperationResultMessage(msg.id, Messages.OperationResultMessage.Operation.Read, msg.key, cache.get(msg.key));
                 issuer.tell(res, getSelf());
-                System.out.format("[%s] HIT | %s %n", getSelf().path().name(), msg.toString());
+                System.out.format("[%s] HIT | %s %n", getSelf().path().name(), msg);
                 System.out.flush();
             }
             // Cache miss, add the request to the active requests and forward it to our parent. Keeping a list of all the pending requests,
             // allows the cache to respond to the issuer of the request on the result is received
             else {
                 activeRequests.put(msg.id, issuer);
-                System.out.format("[%s] MISS | %s %n", getSelf().path().name(), msg.toString());
+                System.out.format("[%s] MISS | %s %n", getSelf().path().name(), msg);
                 System.out.flush();
-                //check if L1cache is crashed, or not
-                //if crashed or timeout, send the message to database
-
-                parent.tell(msg, getSelf());
-            /*if (parent != database) {
-                setTimeout(Configuration.TIMEOUT, msg);
-            }*/
-                //System.out.flush();
+                sendWithTimeout(msg, parent);
             }
         }
 
 
-
-
     }
 
-    private void onRefillMessage(Messages.RefillMessage msg){
+    private void onRefillMessage(Messages.RefillMessage msg) {
         // Update our cache
         cache.put(msg.key, msg.value);
-        System.out.format("[%s] | %s %n", getSelf().path().name(), msg.toString());
-        System.out.flush();
 
-        //check if the cache has children or not, i.e. if it is a L1 or L2 cache
-        if (children != null){
-            for(ActorRef l2cache: children){
-                //check if the l2cache is crashed or not
-                //if crashed or timeout, add the msg on the active req and retry after some milliseconds
-                l2cache.tell(msg, ActorRef.noSender());
-                //setTimeout(Configuration.TIMEOUT);
+        if (children != null) {
+            for (ActorRef l2cache : children) {
+                l2cache.tell(msg, getSelf());
             }
         }
+        System.out.format("[%s] | %s %n", getSelf().path().name(), msg);
+        System.out.flush();
 
 
     }
 
-    private void onRemoveMessage(Messages.RemoveMessage msg){
-        // remove the item from cache
-        //System.out.println("BEFORE REMOVE:"+msg.key+" "+msg.value+" "+cache.containsKey(msg.key));
+    private void onRemoveMessage(Messages.RemoveMessage msg) {
         cache.remove(msg.key);
-        //System.out.println("AFTER REMOVE:" + cache.containsKey(msg.key));
-        System.out.format("[%s] | %s %n", getSelf().path().name(), msg.toString());
-        System.out.flush();
 
-        //check if the cache has children or not, i.e. if it is a L1 or L2 cache
-        if (children != null){
-            for(ActorRef l1cache: children){
-                //check if the l2cache is crashed or not
-                //if crashed or timeout, add the msg on the active req and retry after some milliseconds
-                l1cache.tell(msg, ActorRef.noSender());
+        if (children != null) {
+            for (ActorRef l1cache : children) {
+                l1cache.tell(msg, getSelf());
             }
         }
+        System.out.format("[%s] | %s %n", getSelf().path().name(), msg);
+        System.out.flush();
 
     }
 
+    private void onRecoveryMessage(Messages.RecoveryMessage msg) {
 
-    // emulate a crash and a recovery in a given time
+        if (getSender() == getSelf()) {
+            getContext().become(createReceive());
+            Configuration.currentCrashes--;
+            System.out.format("[%s] Recovered! :D %n", getSelf().path().name());
+            System.out.flush();
+
+            Messages.RecoveryMessage recoveryMsg = new Messages.RecoveryMessage();
+            if (children != null) {
+                for (ActorRef c : children) {
+                    c.tell(recoveryMsg, getSelf());
+                }
+            }
+            else if (clients != null) {
+                for (ActorRef c : clients) {
+                    c.tell(recoveryMsg, getSelf());
+                }
+            }
+        }
+        else {
+            parent = getSender();
+            System.out.format("[%s] parent %s recovered! :D %n", getSelf().path().name(), parent.path().name());
+            System.out.flush();
+        }
+    }
+
+    @Override
+    public void onTimeout(Messages.IdentifiableMessage msg, ActorRef dest) {
+        parent = database;
+        System.out.format("[%s] | Removed %s as it seems dead X(, targeting %s %n", getSelf().path().name(), dest.path().name(), parent.path().name());
+        sendWithTimeout(msg, parent);
+    }
+
+    //endregion
+
+    private boolean shouldCrash() {
+        return Configuration.currentCrashes < Configuration.MAX_CONCURRENT_CRASHES && random.nextDouble() < Configuration.P_CRASH;
+    }
+
+    /**
+     * Emulate a crash and setup a notifier to recover after a given time
+     **/
     void crash() {
         getContext().become(crashed());
-        //crashed = true;
         cache.clear();
-        System.out.format("[%s] Crash!", getSelf().path().name());
+        activeRequests.clear();
+        clearTimeoutsMessages();
+        Configuration.currentCrashes++;
+        System.out.format("[%s] Crash! X( %n", getSelf().path().name());
         System.out.flush();
-
-        // setting a timer to "recover"
-        getContext().system().scheduler().scheduleOnce(
-                Duration.create(Configuration.RECOVERY_TIME, TimeUnit.MILLISECONDS),
-                getSelf(),
-                new Messages.RecoveryMessage(), // message sent to myself
-                getContext().system().dispatcher(), getSelf()
-        );
+        getContext().system().scheduler().scheduleOnce(Duration.create(Configuration.RECOVERY_TIME, TimeUnit.MILLISECONDS), getSelf(), new Messages.RecoveryMessage(), // message sent to myself
+                                                       getContext().system().dispatcher(), getSelf());
     }
 
-
-    final Receive crashed() {
-        return receiveBuilder()
-                .match(Messages.RecoveryMessage.class, this::onRecovery)
-                //.match(ChatMsg.class, this::onCrashedChatMsg)
-                //.matchAny(msg -> {})
-                .matchAny(msg -> System.out.println(getSelf().path().name() + " ignoring " + msg.getClass().getSimpleName() + " (crashed)"))
-                .build();
+    /**
+     * Create the crashed receive builder
+     **/
+    private Receive crashed() {
+        return receiveBuilder().match(Messages.RecoveryMessage.class, this::onRecoveryMessage).matchAny(msg -> System.out.print("")).build();
     }
 
-    private void onRecovery(Messages.RecoveryMessage msg) {
-        getContext().become(createReceive());
-        //crashed = false;
-        System.out.format("[%s] Recovered!", getSelf().path().name());
-        System.out.flush();
-    }
-
-    void setTimeout(int time, Serializable msg) {
-        getContext().system().scheduler().scheduleOnce(
-                Duration.create(time, TimeUnit.MILLISECONDS),
-                getSelf(),
-                new Messages.Timeout(msg), // the message to send
-                getContext().system().dispatcher(),
-                getSelf()
-        );
-    }
-
-    public void onTimeout(Messages.Timeout msg) {
-        System.out.println("Timeout. Send request to the database.");
-        database.tell(msg.msg, getSelf());
-    }
 
 }

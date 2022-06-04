@@ -23,16 +23,21 @@ public class CacheManager {
 
         List<ActorRef> l1Caches = new ArrayList<>();
         List<ActorRef> l2Caches = new ArrayList<>();
-
+        List<ActorRef> clients = new ArrayList<>();
+        for (int i = 0; i < Configuration.N_CLIENTS; i++) {
+            clients.add(system.actorOf(ClientActor.props(), "Client_" + i));
+        }
         // Create caches
         for (int i = 0; i < Configuration.N_L1; i++) {
             ActorRef l1 = system.actorOf(CacheActor.props(), "L1_" + i);
             l1Caches.add(l1);
             List<ActorRef> scopedCaches = new ArrayList<>();
+            Messages.ClientsMessage clientsMessage = new Messages.ClientsMessage(clients);
             for (int j = 0; j < Configuration.N_L2_L1; j++) {
                 ActorRef l2 = system.actorOf(CacheActor.props(), "L2_" + i + "." + j);
                 // Notify the L2 cache about its topology
                 l2.tell(new Messages.TopologyMessage(l1, null, database), ActorRef.noSender());
+                l2.tell(clientsMessage, ActorRef.noSender());
                 scopedCaches.add(l2);
             }
             // Notify the L1 cache about its topology
@@ -43,11 +48,12 @@ public class CacheManager {
         // Notify the database about the L1 caches
         database.tell(new Messages.TopologyMessage(null, l1Caches, database), ActorRef.noSender());
 
-        // Create clients with a reference to all the L2 caches
-        List<ActorRef> clients = new ArrayList<>();
-        for (int i = 0; i < Configuration.N_CLIENTS; i++) {
-            clients.add(system.actorOf(ClientActor.props(l2Caches, database), "Client_" + i));
+        // Give clients a reference to all the L2 caches
+        Messages.TopologyMessage clientsTopology = new Messages.TopologyMessage(null, l2Caches, null);
+        for (ActorRef c : clients) {
+            c.tell(clientsTopology, ActorRef.noSender());
         }
+
         System.out.println("Topology created");
         System.out.flush();
         // Wait for termination

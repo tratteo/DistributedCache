@@ -1,41 +1,36 @@
 package it.unitn.ds1.actors;
 
-import akka.actor.AbstractActor;
 import akka.actor.ActorRef;
 import akka.actor.Cancellable;
 import akka.actor.Props;
-import akka.util.Timeout;
+import akka.japi.pf.ReceiveBuilder;
 import it.unitn.ds1.Configuration;
 import it.unitn.ds1.Messages;
 import scala.concurrent.duration.Duration;
 
 import java.io.Serializable;
-import java.util.List;
-import java.util.Random;
+import java.util.ArrayList;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
-public class ClientActor extends AbstractActor {
-    private List<ActorRef> l2Caches;
-    private Random random;
-    private ActorRef database;
+public class ClientActor extends AgentActor {
+    private ArrayList<ActorRef> l2Caches;
 
-    public ClientActor(List<ActorRef> l2Caches, ActorRef database) {
-        this.l2Caches = l2Caches;
-        random = new Random();
-        this.database = database;
+
+    public ClientActor() {
+        super();
     }
 
-    static public Props props(List<ActorRef> l2Caches, ActorRef database) {
-        return Props.create(ClientActor.class, () -> new ClientActor(l2Caches, database));
+    static public Props props() {
+        return Props.create(ClientActor.class, ClientActor::new);
     }
 
     @Override
-    public void preStart() throws Exception {
+    public void preStart() {
         // Schedule an internal operation notifier at startup
         Cancellable cancellable = getContext().system().scheduler().scheduleOnce(
                 //Duration.create(random.nextInt(5000) + 300, TimeUnit.MILLISECONDS),
-                Duration.create(5000, TimeUnit.MILLISECONDS), getSelf(), new OperationNotifyMessage(), getContext().system().dispatcher(), ActorRef.noSender());
+                Duration.create(1000, TimeUnit.MILLISECONDS), getSelf(), new OperationNotifyMessage(), getContext().system().dispatcher(), ActorRef.noSender());
     }
 
     /**
@@ -45,78 +40,76 @@ public class ClientActor extends AbstractActor {
         return l2Caches.get(random.nextInt(l2Caches.size()));
     }
 
-    @Override
-    public Receive createReceive() {
-        return receiveBuilder().match(OperationNotifyMessage.class, this::onOperationNotifyMessage).match(Messages.OperationResultMessage.class, this::onOperationMessageResult).match(Messages.Timeout.class, this::onTimeout).build();
+    // region Message Handlers
 
-    }
-
-    /**
-     * Got result for a specified request
-     **/
     private void onOperationMessageResult(Messages.OperationResultMessage msg) {
-        System.out.format("[%s] | %s %n", getSelf().path().name(), msg.toString());
+        System.out.format("[%s] | %s %n%n", getSelf().path().name(), msg.toString());
         System.out.flush();
+        // Schedule new operation
+        getContext().system().scheduler().scheduleOnce(Duration.create(1000, TimeUnit.MILLISECONDS), getSelf(), new OperationNotifyMessage(), getContext().system().dispatcher(), ActorRef.noSender());
     }
 
-    /**
-     * Called when it is time to perform a new operation
-     **/
     private void onOperationNotifyMessage(OperationNotifyMessage message) {
-        performTotallyRandomOperation();
-        Cancellable cancellable = getContext().system().scheduler().scheduleOnce(Duration.create(5000, TimeUnit.MILLISECONDS), getSelf(), new OperationNotifyMessage(), getContext().system().dispatcher(), ActorRef.noSender());
+        if (l2Caches != null && l2Caches.size() > 0) {
+            performTotallyRandomOperation();
+        }
     }
+
+    @Override
+    public void onTimeout(Messages.IdentifiableMessage msg, ActorRef dest) {
+        l2Caches.remove(dest);
+        ActorRef newCache = getRandomL2Cache();
+        System.out.format("[%s] | Removed %s as it seems dead X(, targeting new cache %s %n", getSelf().path().name(), dest.path().name(), newCache.path().name());
+        sendWithTimeout(msg, newCache);
+
+    }
+
+    //endregion
 
     private void performTotallyRandomOperation() {
 
-        boolean critical = (random.nextDouble() < 0.5);
-
-        if (random.nextDouble() < 0.25) {
-            ActorRef cache = getRandomL2Cache();
-
-            //Check if L2cache is crashed or not
-            //if crashed or timeout, select another L2cache
-            Serializable msg = new Messages.WriteMessage(UUID.randomUUID(), random.nextInt(Configuration.DATABASE_KEYS), random.nextInt(1000), critical);
-            cache.tell(msg, getSelf());
-            //setTimeout(Configuration.TIMEOUT, msg);
+        boolean critical = random.nextDouble() < Configuration.P_CRITICAL;
+        UUID requestId = UUID.randomUUID();
+        Messages.IdentifiableMessage message;
+        ActorRef cache = getRandomL2Cache();
+        if (random.nextDouble() < Configuration.P_WRITE) {
+            message = new Messages.WriteMessage(requestId, random.nextInt(Configuration.DATABASE_KEYS), random.nextInt(1000), critical);
         }
         else {
-            ActorRef cache = getRandomL2Cache();
+            message = new Messages.ReadMessage(requestId, random.nextInt(Configuration.DATABASE_KEYS), critical);
+        }
+        System.out.format("[%s] | Requesting %s %n", getSelf().path().name(), message);
+        System.out.flush();
+        sendWithTimeout(message, cache);
+    }
 
-            //Check if L2cache is crashed or not
-            //if crashed or timeout, select another L2cache
+    @Override
+    public ReceiveBuilder receiveBuilderFactory() {
+        return receiveBuilder()
+                .match(Messages.TopologyMessage.class, this::onTopologyMessage)
+                .match(Messages.RecoveryMessage.class, this::onCacheRecoveryMessage)
+                .match(OperationNotifyMessage.class, this::onOperationNotifyMessage)
+                .match(Messages.OperationResultMessage.class, this::onOperationMessageResult);
+    }
 
-            Serializable msg = new Messages.ReadMessage(UUID.randomUUID(), random.nextInt(Configuration.DATABASE_KEYS), critical);
-            cache.tell(msg, getSelf());
-            //setTimeout(Configuration.TIMEOUT, msg);
+    private void onTopologyMessage(Messages.TopologyMessage msg) {
+        this.l2Caches = new ArrayList<>(msg.children);
+    }
+
+    private void onCacheRecoveryMessage(Messages.RecoveryMessage msg) {
+        ActorRef cache = getSender();
+        if (!l2Caches.contains(cache)) {
+            l2Caches.add(cache);
+            System.out.format("[%s] cache %s recovered! :D %n", getSelf().path().name(), cache.path().name());
+            System.out.flush();
         }
     }
 
     /**
-     * Message used to notify ourselves that it is time to perform a new totally random operation
+     * Message used to notify ourselves that it is time to perform a new totally random operation :)
      **/
     private static class OperationNotifyMessage implements Serializable {
         public OperationNotifyMessage() {
         }
-    }
-
-    // schedule a Timeout message in specified time
-    void setTimeout(int time, Serializable msg) {
-        getContext().system().scheduler().scheduleOnce(
-                Duration.create(time, TimeUnit.MILLISECONDS),
-                getSelf(),
-                new Messages.Timeout(msg), // the message to send
-                getContext().system().dispatcher(),
-                getSelf()
-        );
-    }
-
-
-    public void onTimeout(Messages.Timeout msg) {
-        System.out.println("Timeout. Choose another L2cache.");
-        ActorRef cache = getRandomL2Cache();
-        cache.tell(msg.msg, getSelf());
-        //setTimeout(Configuration.TIMEOUT, msg.msg);
-        System.out.flush();
     }
 }
