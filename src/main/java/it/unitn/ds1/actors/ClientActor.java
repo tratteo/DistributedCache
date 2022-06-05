@@ -28,6 +28,10 @@ public class ClientActor extends AgentActor {
     }
 
     @Override
+    protected void onAck(UUID ackId) {
+    }
+
+    @Override
     public void preStart() {
         // Schedule an internal operation notifier at startup
         Cancellable cancellable = getContext().system().scheduler().scheduleOnce(
@@ -66,7 +70,7 @@ public class ClientActor extends AgentActor {
         }
         latestRecovers.clear();
         ActorRef newCache = getRandomL2Cache();
-        printFormatted("Removed %s as it seems dead X(, targeting new cache %s", dest.path().name(), newCache.path().name());
+        printFormatted("%s is dead X(. Requesting %s to %s", dest.path().name(), msg, newCache.path().name());
         sendWithTimeout(msg, newCache, Configuration.CLIENT_TIMEOUT);
     }
 
@@ -84,7 +88,7 @@ public class ClientActor extends AgentActor {
             message = new Messages.ReadMessage(requestId, random.nextInt(Configuration.DATABASE_KEYS), critical);
         }
         System.out.println();
-        printFormatted("Requesting %s", message);
+        printFormatted("Requesting %s to %s", message, cache.path().name());
         sendWithTimeout(message, cache, Configuration.CLIENT_TIMEOUT);
     }
 

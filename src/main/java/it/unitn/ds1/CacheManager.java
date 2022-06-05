@@ -21,6 +21,8 @@ public class CacheManager {
         // Create the database actor
         ActorRef database = system.actorOf(DatabaseActor.props(), "Database");
 
+        CrashSynchronizationContext crashSynchronizationContext = new CrashSynchronizationContext();
+
         List<ActorRef> l1Caches = new ArrayList<>();
         List<ActorRef> l2Caches = new ArrayList<>();
         List<ActorRef> clients = new ArrayList<>();
@@ -29,12 +31,12 @@ public class CacheManager {
         }
         // Create caches
         for (int i = 0; i < Configuration.N_L1; i++) {
-            ActorRef l1 = system.actorOf(CacheActor.props(), "L1_" + i);
+            ActorRef l1 = system.actorOf(CacheActor.props(crashSynchronizationContext), "L1_" + i);
             l1Caches.add(l1);
             List<ActorRef> scopedCaches = new ArrayList<>();
             Messages.ClientsMessage clientsMessage = new Messages.ClientsMessage(clients);
             for (int j = 0; j < Configuration.N_L2_L1; j++) {
-                ActorRef l2 = system.actorOf(CacheActor.props(), "L2_" + i + "." + j);
+                ActorRef l2 = system.actorOf(CacheActor.props(crashSynchronizationContext), "L2_" + i + "." + j);
                 // Notify the L2 cache about its topology
                 l2.tell(new Messages.TopologyMessage(l1, null, database), ActorRef.noSender());
                 l2.tell(clientsMessage, ActorRef.noSender());

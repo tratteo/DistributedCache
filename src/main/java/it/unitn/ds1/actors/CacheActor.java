@@ -3,9 +3,7 @@ package it.unitn.ds1.actors;
 import akka.actor.ActorRef;
 import akka.actor.Props;
 import akka.japi.pf.ReceiveBuilder;
-import it.unitn.ds1.CacheElement;
-import it.unitn.ds1.Configuration;
-import it.unitn.ds1.Messages;
+import it.unitn.ds1.*;
 import scala.concurrent.duration.Duration;
 
 import java.io.Serializable;
@@ -15,21 +13,38 @@ import java.util.concurrent.TimeUnit;
 public class CacheActor extends AgentActor {
     private final Map<Integer, CacheElement> cache;
     private final Hashtable<UUID, ActorRef> activeRequests;
+    private final ArrayList<RemoveRequest> removeRequests;
+    private final CrashSynchronizationContext crashSynchronizationContext;
     private ActorRef parent;
     private List<ActorRef> children;
     private List<ActorRef> clients;
     private ActorRef database;
 
-    public CacheActor() {
+    public CacheActor(CrashSynchronizationContext crashSynchronizationContext) {
         super();
+        this.crashSynchronizationContext = crashSynchronizationContext;
         cache = new Hashtable<>();
         activeRequests = new Hashtable<>();
+        removeRequests = new ArrayList<>();
     }
 
-    static public Props props() {
-        return Props.create(CacheActor.class, CacheActor::new);
+    static public Props props(CrashSynchronizationContext crashSynchronizationContext) {
+        return Props.create(CacheActor.class, () -> new CacheActor(crashSynchronizationContext));
     }
 
+    @Override
+    protected void onAck(UUID ackId) {
+        ArrayList<RemoveRequest> toRemove = new ArrayList<>();
+        for (RemoveRequest request : removeRequests) {
+            request.requestsIds.remove(ackId);
+            if (request.requestsIds.size() <= 0) {
+                toRemove.add(request);
+                printFormatted("REMOVE sub-protocol completed");
+                request.issuer.tell(new Messages.AckMessage(request.originalRequestId), getSelf());
+            }
+        }
+        removeRequests.removeAll(toRemove);
+    }
 
     @Override
     public ReceiveBuilder receiveBuilderFactory() {
@@ -51,7 +66,6 @@ public class CacheActor extends AgentActor {
     }
 
     private void onCacheCycle(CacheCycleMessage msg) {
-
         ArrayList<Integer> toRemove = new ArrayList<>();
         for (Map.Entry<Integer, CacheElement> entry : cache.entrySet()) {
             entry.getValue().step(msg.deltaTime);
@@ -80,7 +94,7 @@ public class CacheActor extends AgentActor {
     }
 
     private void onWriteMessage(Messages.WriteMessage msg) {
-        if (shouldCrash()) {
+        if (shouldCrash(Configuration.ProtocolStage.Write)) {
             crash("Write");
             return;
         }
@@ -90,7 +104,7 @@ public class CacheActor extends AgentActor {
         sendWithTimeout(msg, parent, Configuration.TIMEOUT);
     }
 
-    private void updateCacheElement(int key, int value) {
+    private void updateOrAddCacheElement(int key, int value) {
         CacheElement elem = cache.get(key);
         if (elem == null) {
             elem = new CacheElement(value, Configuration.EVICT_TIME);
@@ -102,12 +116,17 @@ public class CacheActor extends AgentActor {
     }
 
     private void onOperationResultMessage(Messages.OperationResultMessage msg) {
-        if (shouldCrash()) {
+        if (shouldCrash(Configuration.ProtocolStage.Result)) {
             crash("Result");
             return;
         }
 
-        updateCacheElement(msg.key, msg.value);
+        if (msg.success) {
+            updateOrAddCacheElement(msg.key, msg.value);
+        }
+        else {
+            removeTimeoutRequest(msg.id);
+        }
         // Forward back the message to the request issuer
         if (activeRequests.containsKey(msg.id)) {
             ActorRef issuer = activeRequests.get(msg.id);
@@ -115,14 +134,14 @@ public class CacheActor extends AgentActor {
             issuer.tell(msg, getSelf());
             activeRequests.remove(msg.id);
         }
+
     }
 
     private void onReadMessage(Messages.ReadMessage msg) {
-        if (shouldCrash()) {
+        if (shouldCrash(Configuration.ProtocolStage.Read)) {
             crash("Read");
             return;
         }
-
         ActorRef issuer = getSender();
         //Check if the operation is critical or not
         if (msg.isCritical) {
@@ -134,7 +153,7 @@ public class CacheActor extends AgentActor {
         else {
             // Cache hit, respond immediately to the requester (sender), client or cache
             if (cache.containsKey(msg.key)) {
-                Messages.OperationResultMessage res = new Messages.OperationResultMessage(msg.id, Messages.OperationResultMessage.Operation.Read, msg.key, cache.get(msg.key).value());
+                Messages.OperationResultMessage res = Messages.OperationResultMessage.Success(msg.id, Messages.OperationResultMessage.Operation.Read, msg.key, cache.get(msg.key).value());
                 printFormatted("(cache hit) %s", msg);
                 issuer.tell(new Messages.AckMessage(msg.id), getSelf());
                 issuer.tell(res, getSelf());
@@ -153,12 +172,13 @@ public class CacheActor extends AgentActor {
     }
 
     private void onRefillMessage(Messages.RefillMessage msg) {
-        if (shouldCrash()) {
+        if (shouldCrash(Configuration.ProtocolStage.Refill)) {
             crash("Refill");
             return;
         }
-        // Update our cache
-        updateCacheElement(msg.key, msg.value);
+        if (cache.containsKey(msg.key)) {
+            updateOrAddCacheElement(msg.key, msg.value);
+        }
 
         if (children != null) {
             for (ActorRef l2cache : children) {
@@ -169,26 +189,33 @@ public class CacheActor extends AgentActor {
     }
 
     private void onRemoveMessage(Messages.RemoveMessage msg) {
-        if (shouldCrash()) {
+        if (shouldCrash(Configuration.ProtocolStage.Remove)) {
             crash("Remove");
             return;
         }
         cache.remove(msg.key);
-
         if (children != null) {
+            ArrayList<UUID> requestsIds = new ArrayList<>();
             for (ActorRef l1cache : children) {
-                l1cache.tell(msg, getSelf());
+                UUID id = UUID.randomUUID();
+                requestsIds.add(id);
+                sendWithTimeout(new Messages.RemoveMessage(id, msg.key), l1cache, Configuration.TIMEOUT);
             }
+            removeRequests.add(new RemoveRequest(msg.key, 0, msg.id, getSender(), requestsIds));
+        }
+        else {
+            printFormatted("REMOVE sub-protocol completed");
+            getSender().tell(new Messages.AckMessage(msg.id), getSelf());
         }
         //printFormatted("%s", msg);
     }
 
     private void onRecoveryMessage(Messages.RecoveryMessage msg) {
-
         if (getSender() == getSelf()) {
             getContext().become(createReceive());
-            Configuration.currentCrashes--;
-            Configuration.currentCrashes = Math.max(Configuration.currentCrashes, 0);
+
+            try {crashSynchronizationContext.decrementCrashes();} catch (Exception ignored) {}
+
             printFormatted("Recovered! :D ");
 
             Messages.RecoveryMessage recoveryMsg = new Messages.RecoveryMessage();
@@ -213,28 +240,39 @@ public class CacheActor extends AgentActor {
 
     @Override
     public void onTimeout(Messages.IdentifiableMessage msg, ActorRef dest) {
-        parent = database;
-        Messages.TopologyMessage topMsg = new Messages.TopologyMessage(dest, new ArrayList<>(Collections.singletonList(getSelf())), database);
-        parent.tell(topMsg, getSelf());
-        printFormatted("Removed %s as it seems dead X(, targeting %s ", dest.path().name(), parent.path().name());
-        sendWithTimeout(msg, parent, Configuration.TIMEOUT);
+        Optional<RemoveRequest> optReq = removeRequests.stream().filter(r -> r.requestsIds.contains(msg.id)).findFirst();
+        if (!optReq.isPresent()) {
+            parent = database;
+            Messages.TopologyMessage topMsg = new Messages.TopologyMessage(null, new ArrayList<>(Collections.singletonList(getSelf())), database);
+            printFormatted("%s is dead X(. Targeting %s ", dest.path().name(), parent.path().name());
+            parent.tell(topMsg, getSelf());
+            sendWithTimeout(msg, parent, Configuration.TIMEOUT);
+        }
+        else {
+            removeRequests.remove(optReq.get());
+        }
     }
 
     //endregion
 
-    private boolean shouldCrash() {
-        return Configuration.currentCrashes < Configuration.MAX_CONCURRENT_CRASHES && random.nextDouble() < Configuration.P_CRASH && children != null;
+    private synchronized boolean shouldCrash(Configuration.ProtocolStage stage) {
+        try {
+            return crashSynchronizationContext.canCrash(stage) && random.nextDouble() < Configuration.P_CRASH;
+        } catch (Exception ignored) {
+            return false;
+        }
     }
 
     /**
-     * Emulate a crash and setup a notifier to recover after a given time
+     * Emulate a crash and set up a notifier to recover after a given time
      **/
     void crash(String context) {
         getContext().become(crashed());
         cache.clear();
         activeRequests.clear();
+        removeRequests.clear();
         clearTimeoutsMessages();
-        Configuration.currentCrashes++;
+        try {crashSynchronizationContext.incrementCrashes();} catch (Exception ignored) {}
         printFormatted("Crash in context [%s]! X(", context, parent.path().name());
         getContext()
                 .system()

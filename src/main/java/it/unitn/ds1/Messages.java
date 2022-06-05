@@ -54,21 +54,39 @@ public class Messages {
         }
     }
 
+
     public static class OperationResultMessage extends IdentifiableMessage {
         public final int key;
         public final Operation operation;
+        public final boolean success;
+        public final String reason;
         public final int value;
 
-        public OperationResultMessage(UUID id, Operation operation, int key, int value) {
+        private OperationResultMessage(UUID id, Operation operation, int key, int value, boolean success, String reason) {
             super(id);
+            this.success = success;
+            this.reason = reason;
             this.key = key;
             this.operation = operation;
             this.value = value;
         }
 
+        public static OperationResultMessage Success(UUID id, Operation operation, int key, int value) {
+            return new OperationResultMessage(id, operation, key, value, true, "");
+        }
+
+        public static OperationResultMessage Error(UUID id, Operation operation, int key, String reason) {
+            return new OperationResultMessage(id, operation, key, 0, false, reason);
+        }
+
         @Override
         public String toString() {
-            return super.toString() + String.format("%s result -> {%d, %d}", operation.toString(), key, value);
+            if (success) {
+                return super.toString() + String.format("SUCCESS :D - %s result -> {%d, %d}", operation.toString(), key, value);
+            }
+            else {
+                return super.toString() + String.format("ERROR :( - %s {%d, %d}, reason -> %s", operation.toString(), key, value, reason);
+            }
         }
 
         public enum Operation {
@@ -111,14 +129,13 @@ public class Messages {
         }
     }
 
-    public static class RefillMessage extends IdentifiableMessage {
+    public static class RefillMessage implements Serializable {
         public final int key;
 
         public final int value;
 
 
-        public RefillMessage(UUID id, int key, int value) {
-            super(id);
+        public RefillMessage(int key, int value) {
             this.key = key;
             this.value = value;
         }

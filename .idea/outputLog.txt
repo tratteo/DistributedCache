@@ -1,0 +1,506 @@
+> Task :compileJava
+> Task :processResources NO-SOURCE
+> Task :classes
+
+> Task :CacheManager.main()
+
+TOPOLOGY CREATED
+
+>>> Press ENTER to continue <<<
+Database   | Topology update :D - adding L1_0 as child 
+Database   | Topology update :D - adding L1_1 as child 
+Database   | Topology update :D - adding L1_2 as child 
+
+Client_0   | Requesting {id: 76e41d57-c76b-49c5-87de-206da4af66de} - WRITE, critical: false -> {3, 722} to L2_0.1 
+Database   | {id: 76e41d57-c76b-49c5-87de-206da4af66de} - WRITE, critical: false -> {3, 722} 
+Database   | Snapshot {"4":88,"3":722,"2":35,"1":926,"0":405} 
+Client_0   | {id: 76e41d57-c76b-49c5-87de-206da4af66de} - SUCCESS :D - Write result -> {3, 722}
+ 
+
+Client_0   | Requesting {id: 8eddde4f-8206-4b27-b280-d0576c9370f7} - WRITE, critical: false -> {0, 10} to L2_1.1 
+Database   | {id: 8eddde4f-8206-4b27-b280-d0576c9370f7} - WRITE, critical: false -> {0, 10} 
+Database   | Snapshot {"4":88,"3":722,"2":35,"1":926,"0":10} 
+Client_0   | {id: 8eddde4f-8206-4b27-b280-d0576c9370f7} - SUCCESS :D - Write result -> {0, 10}
+ 
+
+Client_0   | Requesting {id: ac8245ea-e2bc-4e22-b1c9-ee91285b93d2} - WRITE, critical: false -> {3, 918} to L2_2.0 
+Database   | {id: ac8245ea-e2bc-4e22-b1c9-ee91285b93d2} - WRITE, critical: false -> {3, 918} 
+Database   | Snapshot {"4":88,"3":918,"2":35,"1":926,"0":10} 
+Client_0   | {id: ac8245ea-e2bc-4e22-b1c9-ee91285b93d2} - SUCCESS :D - Write result -> {3, 918}
+ 
+
+Client_0   | Requesting {id: 685f7caf-b3ee-4d12-b308-6bca512f8a8b} - READ, critical: false -> {4} to L2_1.1 
+L2_1.1     | (cache miss) {id: 685f7caf-b3ee-4d12-b308-6bca512f8a8b} - READ, critical: false -> {4} 
+L1_1       | (cache miss) {id: 685f7caf-b3ee-4d12-b308-6bca512f8a8b} - READ, critical: false -> {4} 
+Database   | {id: 685f7caf-b3ee-4d12-b308-6bca512f8a8b} - READ, critical: false -> {4} 
+Client_0   | {id: 685f7caf-b3ee-4d12-b308-6bca512f8a8b} - SUCCESS :D - Read result -> {4, 88}
+ 
+
+Client_0   | Requesting {id: ddeae3c0-6778-4841-a69a-27c2a6b0b31c} - READ, critical: false -> {0} to L2_1.0 
+L2_1.0     | (cache miss) {id: ddeae3c0-6778-4841-a69a-27c2a6b0b31c} - READ, critical: false -> {0} 
+L1_1       | (cache hit) {id: ddeae3c0-6778-4841-a69a-27c2a6b0b31c} - READ, critical: false -> {0} 
+Client_0   | {id: ddeae3c0-6778-4841-a69a-27c2a6b0b31c} - SUCCESS :D - Read result -> {0, 10}
+ 
+
+Client_0   | Requesting {id: 9703bab8-8b85-4080-a79a-0a71132b19f3} - READ, critical: false -> {0} to L2_0.1 
+L2_0.1     | (cache miss) {id: 9703bab8-8b85-4080-a79a-0a71132b19f3} - READ, critical: false -> {0} 
+L1_0       | (cache miss) {id: 9703bab8-8b85-4080-a79a-0a71132b19f3} - READ, critical: false -> {0} 
+Database   | {id: 9703bab8-8b85-4080-a79a-0a71132b19f3} - READ, critical: false -> {0} 
+L1_0       | Crash in context [Result]! X( 
+L2_0.1     | L1_0 is dead X(. Targeting Database  
+Database   | Topology update :D - adding L2_0.1 as child 
+Database   | {id: 9703bab8-8b85-4080-a79a-0a71132b19f3} - READ, critical: false -> {0} 
+Client_0   | {id: 9703bab8-8b85-4080-a79a-0a71132b19f3} - SUCCESS :D - Read result -> {0, 10}
+ 
+
+Client_0   | Requesting {id: 26fd6c3c-c488-4ce4-8984-1b7bf4e0d77f} - READ, critical: false -> {1} to L2_1.1 
+L2_1.1     | (cache miss) {id: 26fd6c3c-c488-4ce4-8984-1b7bf4e0d77f} - READ, critical: false -> {1} 
+L1_1       | (cache miss) {id: 26fd6c3c-c488-4ce4-8984-1b7bf4e0d77f} - READ, critical: false -> {1} 
+Database   | {id: 26fd6c3c-c488-4ce4-8984-1b7bf4e0d77f} - READ, critical: false -> {1} 
+Client_0   | {id: 26fd6c3c-c488-4ce4-8984-1b7bf4e0d77f} - SUCCESS :D - Read result -> {1, 926}
+ 
+
+Client_0   | Requesting {id: 94cd555e-93c9-430a-8b91-6329583978c8} - READ, critical: false -> {3} to L2_0.0 
+L2_0.0     | (cache miss) {id: 94cd555e-93c9-430a-8b91-6329583978c8} - READ, critical: false -> {3} 
+L1_0       | Recovered! :D  
+L2_0.1     | Parent L1_0 recovered! Rebuilding topology :D 
+Database   | Topology update :D - removing L2_0.1 as child 
+L2_0.0     | Parent L1_0 recovered! Rebuilding topology :D 
+L2_0.0     | L1_0 is dead X(. Targeting Database  
+Database   | Topology update :D - adding L2_0.0 as child 
+Database   | {id: 94cd555e-93c9-430a-8b91-6329583978c8} - READ, critical: false -> {3} 
+Client_0   | {id: 94cd555e-93c9-430a-8b91-6329583978c8} - SUCCESS :D - Read result -> {3, 918}
+ 
+
+Client_0   | Requesting {id: 32909f26-23a8-4574-8d68-4ae798bb3d4a} - READ, critical: true -> {1} to L2_2.0 
+L2_2.0     | {id: 32909f26-23a8-4574-8d68-4ae798bb3d4a} - READ, critical: true -> {1} 
+L1_2       | {id: 32909f26-23a8-4574-8d68-4ae798bb3d4a} - READ, critical: true -> {1} 
+Database   | {id: 32909f26-23a8-4574-8d68-4ae798bb3d4a} - READ, critical: true -> {1} 
+Client_0   | {id: 32909f26-23a8-4574-8d68-4ae798bb3d4a} - SUCCESS :D - Read result -> {1, 926}
+ 
+
+Client_0   | Requesting {id: 5a99fd5f-0897-4394-9cde-7a64c40fdd4f} - READ, critical: false -> {3} to L2_2.1 
+L2_2.1     | (cache miss) {id: 5a99fd5f-0897-4394-9cde-7a64c40fdd4f} - READ, critical: false -> {3} 
+L1_2       | (cache miss) {id: 5a99fd5f-0897-4394-9cde-7a64c40fdd4f} - READ, critical: false -> {3} 
+Database   | {id: 5a99fd5f-0897-4394-9cde-7a64c40fdd4f} - READ, critical: false -> {3} 
+Client_0   | {id: 5a99fd5f-0897-4394-9cde-7a64c40fdd4f} - SUCCESS :D - Read result -> {3, 918}
+ 
+
+Client_0   | Requesting {id: 9b2d68fa-7325-44c3-af05-bab87094fe20} - READ, critical: false -> {3} to L2_2.1 
+L2_2.1     | (cache hit) {id: 9b2d68fa-7325-44c3-af05-bab87094fe20} - READ, critical: false -> {3} 
+Client_0   | {id: 9b2d68fa-7325-44c3-af05-bab87094fe20} - SUCCESS :D - Read result -> {3, 918}
+ 
+
+Client_0   | Requesting {id: a777b484-d151-4345-b25e-e87acd7bf03e} - READ, critical: false -> {2} to L2_2.1 
+L2_2.1     | (cache miss) {id: a777b484-d151-4345-b25e-e87acd7bf03e} - READ, critical: false -> {2} 
+L1_2       | (cache miss) {id: a777b484-d151-4345-b25e-e87acd7bf03e} - READ, critical: false -> {2} 
+Database   | {id: a777b484-d151-4345-b25e-e87acd7bf03e} - READ, critical: false -> {2} 
+Client_0   | {id: a777b484-d151-4345-b25e-e87acd7bf03e} - SUCCESS :D - Read result -> {2, 35}
+ 
+
+Client_0   | Requesting {id: 18c75c35-8f19-472c-b51a-59e827c1443c} - READ, critical: false -> {2} to L2_2.0 
+L2_2.0     | (cache miss) {id: 18c75c35-8f19-472c-b51a-59e827c1443c} - READ, critical: false -> {2} 
+L1_2       | (cache hit) {id: 18c75c35-8f19-472c-b51a-59e827c1443c} - READ, critical: false -> {2} 
+Client_0   | {id: 18c75c35-8f19-472c-b51a-59e827c1443c} - SUCCESS :D - Read result -> {2, 35}
+ 
+
+Client_0   | Requesting {id: 58d5e399-af88-488b-b0f0-741df76bb313} - WRITE, critical: false -> {3, 457} to L2_2.0 
+Database   | {id: 58d5e399-af88-488b-b0f0-741df76bb313} - WRITE, critical: false -> {3, 457} 
+Database   | Snapshot {"4":88,"3":457,"2":35,"1":926,"0":10} 
+Client_0   | {id: 58d5e399-af88-488b-b0f0-741df76bb313} - SUCCESS :D - Write result -> {3, 457}
+ 
+
+Client_0   | Requesting {id: 1dc22c2c-7a56-4adc-8952-48489595f065} - WRITE, critical: false -> {3, 310} to L2_2.0 
+Database   | {id: 1dc22c2c-7a56-4adc-8952-48489595f065} - WRITE, critical: false -> {3, 310} 
+Database   | Snapshot {"4":88,"3":310,"2":35,"1":926,"0":10} 
+L2_0.0     | Crash in context [Refill]! X( 
+Client_0   | {id: 1dc22c2c-7a56-4adc-8952-48489595f065} - SUCCESS :D - Write result -> {3, 310}
+ 
+
+Client_0   | Requesting {id: 41c9833b-ef33-44f3-8bb1-b624c0c39b95} - READ, critical: false -> {0} to L2_0.1 
+L2_0.1     | (cache miss) {id: 41c9833b-ef33-44f3-8bb1-b624c0c39b95} - READ, critical: false -> {0} 
+L1_0       | (cache miss) {id: 41c9833b-ef33-44f3-8bb1-b624c0c39b95} - READ, critical: false -> {0} 
+Database   | {id: 41c9833b-ef33-44f3-8bb1-b624c0c39b95} - READ, critical: false -> {0} 
+Client_0   | {id: 41c9833b-ef33-44f3-8bb1-b624c0c39b95} - SUCCESS :D - Read result -> {0, 10}
+ 
+
+Client_0   | Requesting {id: 540976ff-d9cf-427a-9d5e-c6e4d824611b} - WRITE, critical: true -> {4, 575} to L2_2.0 
+Database   | {id: 540976ff-d9cf-427a-9d5e-c6e4d824611b} - WRITE, critical: true -> {4, 575} 
+Database   | Critical WRITE received, initiating REMOVE protocol 
+L2_1.0     | REMOVE sub-protocol completed 
+L2_2.1     | REMOVE sub-protocol completed 
+L2_2.0     | REMOVE sub-protocol completed 
+L2_0.1     | REMOVE sub-protocol completed 
+L2_1.1     | REMOVE sub-protocol completed 
+L1_2       | REMOVE sub-protocol completed 
+L1_1       | REMOVE sub-protocol completed 
+Database   | Timeout for L1_0, aborting REMOVE protocol 
+Client_0   | {id: 540976ff-d9cf-427a-9d5e-c6e4d824611b} - ERROR :( - Write {4, 0}, reason -> Cache L1_0 timed out during the REMOVE protocol
+ 
+
+Client_0   | Requesting {id: dc969dd8-143e-4793-bbc4-3a7e9bf9eaed} - WRITE, critical: false -> {4, 244} to L2_0.1 
+Database   | {id: dc969dd8-143e-4793-bbc4-3a7e9bf9eaed} - WRITE, critical: false -> {4, 244} 
+Database   | Snapshot {"4":244,"3":310,"2":35,"1":926,"0":10} 
+Client_0   | {id: dc969dd8-143e-4793-bbc4-3a7e9bf9eaed} - SUCCESS :D - Write result -> {4, 244}
+ 
+
+Client_0   | Requesting {id: dfce94f2-82d2-4299-8b87-81ecb842867a} - WRITE, critical: true -> {3, 798} to L2_1.0 
+Database   | {id: dfce94f2-82d2-4299-8b87-81ecb842867a} - WRITE, critical: true -> {3, 798} 
+Database   | Critical WRITE received, initiating REMOVE protocol 
+L2_1.0     | REMOVE sub-protocol completed 
+L2_1.1     | REMOVE sub-protocol completed 
+L2_2.0     | REMOVE sub-protocol completed 
+L2_2.1     | REMOVE sub-protocol completed 
+L2_0.1     | REMOVE sub-protocol completed 
+L1_2       | REMOVE sub-protocol completed 
+L1_1       | REMOVE sub-protocol completed 
+Database   | Timeout for L1_0, aborting REMOVE protocol 
+Client_0   | {id: dfce94f2-82d2-4299-8b87-81ecb842867a} - ERROR :( - Write {3, 0}, reason -> Cache L1_0 timed out during the REMOVE protocol
+ 
+
+Client_0   | Requesting {id: cd2560d4-bc61-4c4c-9127-7ef6d6a69612} - READ, critical: true -> {4} to L2_2.0 
+L2_2.0     | {id: cd2560d4-bc61-4c4c-9127-7ef6d6a69612} - READ, critical: true -> {4} 
+L1_2       | {id: cd2560d4-bc61-4c4c-9127-7ef6d6a69612} - READ, critical: true -> {4} 
+Database   | {id: cd2560d4-bc61-4c4c-9127-7ef6d6a69612} - READ, critical: true -> {4} 
+Client_0   | {id: cd2560d4-bc61-4c4c-9127-7ef6d6a69612} - SUCCESS :D - Read result -> {4, 244}
+ 
+
+Client_0   | Requesting {id: 98a5213b-6e02-45c4-8816-fcb29e13e2a3} - READ, critical: false -> {0} to L2_2.0 
+L2_2.0     | (cache miss) {id: 98a5213b-6e02-45c4-8816-fcb29e13e2a3} - READ, critical: false -> {0} 
+L1_2       | (cache miss) {id: 98a5213b-6e02-45c4-8816-fcb29e13e2a3} - READ, critical: false -> {0} 
+Database   | {id: 98a5213b-6e02-45c4-8816-fcb29e13e2a3} - READ, critical: false -> {0} 
+Client_0   | {id: 98a5213b-6e02-45c4-8816-fcb29e13e2a3} - SUCCESS :D - Read result -> {0, 10}
+ 
+
+Client_0   | Requesting {id: 98fb2222-e032-47d1-8724-9d0ba2477fae} - WRITE, critical: false -> {3, 260} to L2_1.1 
+Database   | {id: 98fb2222-e032-47d1-8724-9d0ba2477fae} - WRITE, critical: false -> {3, 260} 
+Database   | Snapshot {"4":244,"3":260,"2":35,"1":926,"0":10} 
+Client_0   | {id: 98fb2222-e032-47d1-8724-9d0ba2477fae} - SUCCESS :D - Write result -> {3, 260}
+ 
+
+Client_0   | Requesting {id: 3ac3016f-f74e-465a-b734-dee5632a6433} - READ, critical: false -> {1} to L2_1.0 
+L2_1.0     | (cache miss) {id: 3ac3016f-f74e-465a-b734-dee5632a6433} - READ, critical: false -> {1} 
+L1_1       | (cache miss) {id: 3ac3016f-f74e-465a-b734-dee5632a6433} - READ, critical: false -> {1} 
+Database   | {id: 3ac3016f-f74e-465a-b734-dee5632a6433} - READ, critical: false -> {1} 
+Client_0   | {id: 3ac3016f-f74e-465a-b734-dee5632a6433} - SUCCESS :D - Read result -> {1, 926}
+ 
+
+Client_0   | Requesting {id: 8021050a-cb27-485d-a195-8eeb1b2c3604} - WRITE, critical: true -> {3, 6} to L2_1.1 
+Database   | {id: 8021050a-cb27-485d-a195-8eeb1b2c3604} - WRITE, critical: true -> {3, 6} 
+Database   | Critical WRITE received, initiating REMOVE protocol 
+L2_0.1     | REMOVE sub-protocol completed 
+L2_1.0     | REMOVE sub-protocol completed 
+L2_2.0     | REMOVE sub-protocol completed 
+L2_2.1     | REMOVE sub-protocol completed 
+L2_1.1     | REMOVE sub-protocol completed 
+L1_2       | REMOVE sub-protocol completed 
+L1_1       | REMOVE sub-protocol completed 
+Database   | Timeout for L1_0, aborting REMOVE protocol 
+Client_0   | {id: 8021050a-cb27-485d-a195-8eeb1b2c3604} - ERROR :( - Write {3, 0}, reason -> Cache L1_0 timed out during the REMOVE protocol
+ 
+L2_0.0     | Recovered! :D  
+
+Client_0   | Requesting {id: f36d30d8-ed33-47f6-b8c6-c865bd930476} - READ, critical: false -> {0} to L2_1.0 
+L2_1.0     | (cache miss) {id: f36d30d8-ed33-47f6-b8c6-c865bd930476} - READ, critical: false -> {0} 
+L1_1       | (cache miss) {id: f36d30d8-ed33-47f6-b8c6-c865bd930476} - READ, critical: false -> {0} 
+Database   | {id: f36d30d8-ed33-47f6-b8c6-c865bd930476} - READ, critical: false -> {0} 
+Client_0   | {id: f36d30d8-ed33-47f6-b8c6-c865bd930476} - SUCCESS :D - Read result -> {0, 10}
+ 
+
+Client_0   | Requesting {id: e9fd6ca6-5e1d-4ddb-8ef1-4e70c3df94f5} - WRITE, critical: false -> {3, 553} to L2_2.0 
+Database   | {id: e9fd6ca6-5e1d-4ddb-8ef1-4e70c3df94f5} - WRITE, critical: false -> {3, 553} 
+Database   | Snapshot {"4":244,"3":553,"2":35,"1":926,"0":10} 
+L1_0       | Crash in context [Refill]! X( 
+Client_0   | {id: e9fd6ca6-5e1d-4ddb-8ef1-4e70c3df94f5} - SUCCESS :D - Write result -> {3, 553}
+ 
+
+Client_0   | Requesting {id: 7b98aced-5239-4e14-a701-f79addc319ca} - WRITE, critical: false -> {3, 298} to L2_1.0 
+Database   | {id: 7b98aced-5239-4e14-a701-f79addc319ca} - WRITE, critical: false -> {3, 298} 
+Database   | Snapshot {"4":244,"3":298,"2":35,"1":926,"0":10} 
+Client_0   | {id: 7b98aced-5239-4e14-a701-f79addc319ca} - SUCCESS :D - Write result -> {3, 298}
+ 
+
+Client_0   | Requesting {id: 489242c0-62a0-480a-8368-e27092372997} - WRITE, critical: false -> {4, 579} to L2_2.1 
+Database   | {id: 489242c0-62a0-480a-8368-e27092372997} - WRITE, critical: false -> {4, 579} 
+Database   | Snapshot {"4":579,"3":298,"2":35,"1":926,"0":10} 
+Client_0   | {id: 489242c0-62a0-480a-8368-e27092372997} - SUCCESS :D - Write result -> {4, 579}
+ 
+
+Client_0   | Requesting {id: eae2aeae-45d6-476a-9f0f-a6f1eb17116b} - READ, critical: false -> {2} to L2_0.1 
+L2_0.1     | (cache miss) {id: eae2aeae-45d6-476a-9f0f-a6f1eb17116b} - READ, critical: false -> {2} 
+L2_0.1     | L1_0 is dead X(. Targeting Database  
+Database   | Topology update :D - adding L2_0.1 as child 
+Database   | {id: eae2aeae-45d6-476a-9f0f-a6f1eb17116b} - READ, critical: false -> {2} 
+Client_0   | {id: eae2aeae-45d6-476a-9f0f-a6f1eb17116b} - SUCCESS :D - Read result -> {2, 35}
+ 
+
+Client_0   | Requesting {id: 33ab95da-a533-4fe3-a631-49cdb0fb2a27} - WRITE, critical: false -> {2, 805} to L2_0.1 
+Database   | {id: 33ab95da-a533-4fe3-a631-49cdb0fb2a27} - WRITE, critical: false -> {2, 805} 
+Database   | Snapshot {"4":579,"3":298,"2":805,"1":926,"0":10} 
+Client_0   | {id: 33ab95da-a533-4fe3-a631-49cdb0fb2a27} - SUCCESS :D - Write result -> {2, 805}
+ 
+
+Client_0   | Requesting {id: af09ff3a-20fb-4148-bdea-a5406a6350cc} - READ, critical: true -> {4} to L2_1.1 
+L2_1.1     | {id: af09ff3a-20fb-4148-bdea-a5406a6350cc} - READ, critical: true -> {4} 
+L1_1       | {id: af09ff3a-20fb-4148-bdea-a5406a6350cc} - READ, critical: true -> {4} 
+Database   | {id: af09ff3a-20fb-4148-bdea-a5406a6350cc} - READ, critical: true -> {4} 
+Client_0   | {id: af09ff3a-20fb-4148-bdea-a5406a6350cc} - SUCCESS :D - Read result -> {4, 579}
+ 
+
+Client_0   | Requesting {id: 37797ba2-826e-4e3d-938b-76a05e10e75a} - READ, critical: false -> {2} to L2_2.0 
+L2_2.0     | (cache miss) {id: 37797ba2-826e-4e3d-938b-76a05e10e75a} - READ, critical: false -> {2} 
+L1_2       | (cache miss) {id: 37797ba2-826e-4e3d-938b-76a05e10e75a} - READ, critical: false -> {2} 
+Database   | {id: 37797ba2-826e-4e3d-938b-76a05e10e75a} - READ, critical: false -> {2} 
+Client_0   | {id: 37797ba2-826e-4e3d-938b-76a05e10e75a} - SUCCESS :D - Read result -> {2, 805}
+ 
+
+Client_0   | Requesting {id: 05a2e447-88f2-46cb-8769-f7992235cc63} - READ, critical: true -> {1} to L2_0.1 
+L2_0.1     | {id: 05a2e447-88f2-46cb-8769-f7992235cc63} - READ, critical: true -> {1} 
+Database   | {id: 05a2e447-88f2-46cb-8769-f7992235cc63} - READ, critical: true -> {1} 
+Client_0   | {id: 05a2e447-88f2-46cb-8769-f7992235cc63} - SUCCESS :D - Read result -> {1, 926}
+ 
+
+Client_0   | Requesting {id: 35bf342e-f3f8-41fe-a208-b7f0160c55c5} - WRITE, critical: true -> {4, 103} to L2_0.1 
+Database   | {id: 35bf342e-f3f8-41fe-a208-b7f0160c55c5} - WRITE, critical: true -> {4, 103} 
+Database   | Critical WRITE received, initiating REMOVE protocol 
+L2_0.1     | REMOVE sub-protocol completed 
+L2_1.0     | REMOVE sub-protocol completed 
+L2_2.1     | REMOVE sub-protocol completed 
+L2_1.1     | REMOVE sub-protocol completed 
+L2_0.0     | REMOVE sub-protocol completed 
+L2_2.0     | REMOVE sub-protocol completed 
+L1_2       | REMOVE sub-protocol completed 
+L1_1       | REMOVE sub-protocol completed 
+Database   | Timeout for L1_0, aborting REMOVE protocol 
+Client_0   | {id: 35bf342e-f3f8-41fe-a208-b7f0160c55c5} - ERROR :( - Write {4, 0}, reason -> Cache L1_0 timed out during the REMOVE protocol
+ 
+
+Client_0   | Requesting {id: 7ae9d67c-58b7-474d-94d2-b8e8d9d90814} - READ, critical: false -> {3} to L2_0.0 
+L2_0.0     | (cache miss) {id: 7ae9d67c-58b7-474d-94d2-b8e8d9d90814} - READ, critical: false -> {3} 
+Database   | {id: 7ae9d67c-58b7-474d-94d2-b8e8d9d90814} - READ, critical: false -> {3} 
+Client_0   | {id: 7ae9d67c-58b7-474d-94d2-b8e8d9d90814} - SUCCESS :D - Read result -> {3, 298}
+ 
+L1_0       | Recovered! :D  
+L2_0.0     | Parent L1_0 recovered! Rebuilding topology :D 
+Database   | Topology update :D - removing L2_0.0 as child 
+L2_0.1     | Parent L1_0 recovered! Rebuilding topology :D 
+Database   | Topology update :D - removing L2_0.1 as child 
+
+Client_0   | Requesting {id: b8a4fa0f-9eb6-4bf4-84c7-846a6f820089} - WRITE, critical: false -> {0, 305} to L2_2.1 
+Database   | {id: b8a4fa0f-9eb6-4bf4-84c7-846a6f820089} - WRITE, critical: false -> {0, 305} 
+Database   | Snapshot {"4":579,"3":298,"2":805,"1":926,"0":305} 
+L1_2       | Crash in context [Refill]! X( 
+L2_2.1     | L1_2 is dead X(. Targeting Database  
+Database   | Topology update :D - adding L2_2.1 as child 
+Database   | {id: b8a4fa0f-9eb6-4bf4-84c7-846a6f820089} - WRITE, critical: false -> {0, 305} 
+Database   | Snapshot {"4":579,"3":298,"2":805,"1":926,"0":305} 
+Client_0   | {id: b8a4fa0f-9eb6-4bf4-84c7-846a6f820089} - SUCCESS :D - Write result -> {0, 305}
+ 
+
+Client_0   | Requesting {id: ce3ca05b-a559-419b-b00f-b97a567e0438} - READ, critical: false -> {3} to L2_0.1 
+L2_0.1     | (cache miss) {id: ce3ca05b-a559-419b-b00f-b97a567e0438} - READ, critical: false -> {3} 
+L1_0       | (cache miss) {id: ce3ca05b-a559-419b-b00f-b97a567e0438} - READ, critical: false -> {3} 
+Database   | {id: ce3ca05b-a559-419b-b00f-b97a567e0438} - READ, critical: false -> {3} 
+Client_0   | {id: ce3ca05b-a559-419b-b00f-b97a567e0438} - SUCCESS :D - Read result -> {3, 298}
+ 
+
+Client_0   | Requesting {id: d2a510c9-5be2-4d4c-ba7f-ab0e3d4044b3} - READ, critical: true -> {0} to L2_2.1 
+L2_2.1     | {id: d2a510c9-5be2-4d4c-ba7f-ab0e3d4044b3} - READ, critical: true -> {0} 
+Database   | {id: d2a510c9-5be2-4d4c-ba7f-ab0e3d4044b3} - READ, critical: true -> {0} 
+Client_0   | {id: d2a510c9-5be2-4d4c-ba7f-ab0e3d4044b3} - SUCCESS :D - Read result -> {0, 305}
+ 
+
+Client_0   | Requesting {id: ddc69172-2bc1-4a7a-8c2c-684a21171e6c} - READ, critical: true -> {0} to L2_0.1 
+L2_0.1     | {id: ddc69172-2bc1-4a7a-8c2c-684a21171e6c} - READ, critical: true -> {0} 
+L1_0       | {id: ddc69172-2bc1-4a7a-8c2c-684a21171e6c} - READ, critical: true -> {0} 
+Database   | {id: ddc69172-2bc1-4a7a-8c2c-684a21171e6c} - READ, critical: true -> {0} 
+Client_0   | {id: ddc69172-2bc1-4a7a-8c2c-684a21171e6c} - SUCCESS :D - Read result -> {0, 305}
+ 
+
+Client_0   | Requesting {id: 54eb7bca-80a3-4dc7-94a2-fa3150a1d5b2} - READ, critical: true -> {4} to L2_1.1 
+L2_1.1     | {id: 54eb7bca-80a3-4dc7-94a2-fa3150a1d5b2} - READ, critical: true -> {4} 
+L1_1       | {id: 54eb7bca-80a3-4dc7-94a2-fa3150a1d5b2} - READ, critical: true -> {4} 
+Database   | {id: 54eb7bca-80a3-4dc7-94a2-fa3150a1d5b2} - READ, critical: true -> {4} 
+Client_0   | {id: 54eb7bca-80a3-4dc7-94a2-fa3150a1d5b2} - SUCCESS :D - Read result -> {4, 579}
+ 
+
+Client_0   | Requesting {id: 554dfe2c-0576-4a07-8740-c848a263830e} - READ, critical: false -> {4} to L2_0.1 
+L2_0.1     | (cache miss) {id: 554dfe2c-0576-4a07-8740-c848a263830e} - READ, critical: false -> {4} 
+L1_0       | (cache miss) {id: 554dfe2c-0576-4a07-8740-c848a263830e} - READ, critical: false -> {4} 
+Database   | {id: 554dfe2c-0576-4a07-8740-c848a263830e} - READ, critical: false -> {4} 
+Client_0   | {id: 554dfe2c-0576-4a07-8740-c848a263830e} - SUCCESS :D - Read result -> {4, 579}
+ 
+L1_2       | Recovered! :D  
+L2_2.0     | Parent L1_2 recovered! Rebuilding topology :D 
+L2_2.1     | Parent L1_2 recovered! Rebuilding topology :D 
+Database   | Topology update :D - removing L2_2.1 as child 
+
+Client_0   | Requesting {id: ec151acb-a0a4-4eed-9d2d-5f04273471c1} - READ, critical: false -> {3} to L2_1.0 
+L2_1.0     | (cache miss) {id: ec151acb-a0a4-4eed-9d2d-5f04273471c1} - READ, critical: false -> {3} 
+L1_1       | (cache miss) {id: ec151acb-a0a4-4eed-9d2d-5f04273471c1} - READ, critical: false -> {3} 
+Database   | {id: ec151acb-a0a4-4eed-9d2d-5f04273471c1} - READ, critical: false -> {3} 
+Client_0   | {id: ec151acb-a0a4-4eed-9d2d-5f04273471c1} - SUCCESS :D - Read result -> {3, 298}
+ 
+
+Client_0   | Requesting {id: ebc8db01-0d36-4106-8010-297502723194} - READ, critical: false -> {3} to L2_0.1 
+L2_0.1     | (cache hit) {id: ebc8db01-0d36-4106-8010-297502723194} - READ, critical: false -> {3} 
+Client_0   | {id: ebc8db01-0d36-4106-8010-297502723194} - SUCCESS :D - Read result -> {3, 298}
+ 
+
+Client_0   | Requesting {id: 1982db25-cc1c-47e1-bd5a-b554a430fc7f} - READ, critical: false -> {1} to L2_2.1 
+L2_2.1     | (cache miss) {id: 1982db25-cc1c-47e1-bd5a-b554a430fc7f} - READ, critical: false -> {1} 
+L1_2       | (cache miss) {id: 1982db25-cc1c-47e1-bd5a-b554a430fc7f} - READ, critical: false -> {1} 
+Database   | {id: 1982db25-cc1c-47e1-bd5a-b554a430fc7f} - READ, critical: false -> {1} 
+L2_2.1     | Crash in context [Result]! X( 
+Client_0   | L2_2.1 is dead X(. Requesting {id: 1982db25-cc1c-47e1-bd5a-b554a430fc7f} - READ, critical: false -> {1} to L2_1.0 
+L2_1.0     | (cache miss) {id: 1982db25-cc1c-47e1-bd5a-b554a430fc7f} - READ, critical: false -> {1} 
+L1_1       | (cache miss) {id: 1982db25-cc1c-47e1-bd5a-b554a430fc7f} - READ, critical: false -> {1} 
+Database   | {id: 1982db25-cc1c-47e1-bd5a-b554a430fc7f} - READ, critical: false -> {1} 
+Client_0   | {id: 1982db25-cc1c-47e1-bd5a-b554a430fc7f} - SUCCESS :D - Read result -> {1, 926}
+ 
+
+Client_0   | Requesting {id: 8f9e935c-7bb5-4bc7-9582-5221798b2350} - READ, critical: false -> {3} to L2_0.1 
+L2_0.1     | (cache miss) {id: 8f9e935c-7bb5-4bc7-9582-5221798b2350} - READ, critical: false -> {3} 
+L1_0       | (cache miss) {id: 8f9e935c-7bb5-4bc7-9582-5221798b2350} - READ, critical: false -> {3} 
+Database   | {id: 8f9e935c-7bb5-4bc7-9582-5221798b2350} - READ, critical: false -> {3} 
+Client_0   | {id: 8f9e935c-7bb5-4bc7-9582-5221798b2350} - SUCCESS :D - Read result -> {3, 298}
+ 
+
+Client_0   | Requesting {id: 7296462c-fa45-4f7c-a281-7569defdbb36} - READ, critical: false -> {4} to L2_1.0 
+L2_1.0     | (cache miss) {id: 7296462c-fa45-4f7c-a281-7569defdbb36} - READ, critical: false -> {4} 
+L1_1       | (cache miss) {id: 7296462c-fa45-4f7c-a281-7569defdbb36} - READ, critical: false -> {4} 
+Database   | {id: 7296462c-fa45-4f7c-a281-7569defdbb36} - READ, critical: false -> {4} 
+Client_0   | {id: 7296462c-fa45-4f7c-a281-7569defdbb36} - SUCCESS :D - Read result -> {4, 579}
+ 
+
+Client_0   | Requesting {id: c8d7935f-0a08-4895-8857-a36b04e48448} - READ, critical: false -> {1} to L2_1.1 
+L2_1.1     | (cache miss) {id: c8d7935f-0a08-4895-8857-a36b04e48448} - READ, critical: false -> {1} 
+L1_1       | (cache hit) {id: c8d7935f-0a08-4895-8857-a36b04e48448} - READ, critical: false -> {1} 
+Client_0   | {id: c8d7935f-0a08-4895-8857-a36b04e48448} - SUCCESS :D - Read result -> {1, 926}
+ 
+
+Client_0   | Requesting {id: eeddbc1a-d6f1-417e-8009-e964450ff0c7} - READ, critical: false -> {1} to L2_2.0 
+L2_2.0     | (cache miss) {id: eeddbc1a-d6f1-417e-8009-e964450ff0c7} - READ, critical: false -> {1} 
+L1_2       | (cache hit) {id: eeddbc1a-d6f1-417e-8009-e964450ff0c7} - READ, critical: false -> {1} 
+Client_0   | {id: eeddbc1a-d6f1-417e-8009-e964450ff0c7} - SUCCESS :D - Read result -> {1, 926}
+ 
+
+Client_0   | Requesting {id: eda16e3b-bb94-4690-a267-ec8f15502ff6} - WRITE, critical: false -> {3, 57} to L2_1.1 
+Database   | {id: eda16e3b-bb94-4690-a267-ec8f15502ff6} - WRITE, critical: false -> {3, 57} 
+Database   | Snapshot {"4":579,"3":57,"2":805,"1":926,"0":305} 
+Client_0   | {id: eda16e3b-bb94-4690-a267-ec8f15502ff6} - SUCCESS :D - Write result -> {3, 57}
+ 
+L2_2.1     | Recovered! :D  
+Client_0   | Cache L2_2.1 recovered! Rebuilding topology :D  
+
+Client_0   | Requesting {id: 11e98e12-03d0-4a7d-a5b7-92193ffbdea0} - WRITE, critical: false -> {0, 216} to L2_2.1 
+Database   | {id: 11e98e12-03d0-4a7d-a5b7-92193ffbdea0} - WRITE, critical: false -> {0, 216} 
+Database   | Snapshot {"4":579,"3":57,"2":805,"1":926,"0":216} 
+Client_0   | {id: 11e98e12-03d0-4a7d-a5b7-92193ffbdea0} - SUCCESS :D - Write result -> {0, 216}
+ 
+
+Client_0   | Requesting {id: 364fc3cd-8593-4980-aa6a-5982f1773b5a} - READ, critical: false -> {4} to L2_1.1 
+L2_1.1     | (cache miss) {id: 364fc3cd-8593-4980-aa6a-5982f1773b5a} - READ, critical: false -> {4} 
+L1_1       | (cache hit) {id: 364fc3cd-8593-4980-aa6a-5982f1773b5a} - READ, critical: false -> {4} 
+Client_0   | {id: 364fc3cd-8593-4980-aa6a-5982f1773b5a} - SUCCESS :D - Read result -> {4, 579}
+ 
+
+Client_0   | Requesting {id: de386ab4-b705-44b9-988c-5a6bc219cdf3} - WRITE, critical: true -> {2, 234} to L2_2.1 
+Database   | {id: de386ab4-b705-44b9-988c-5a6bc219cdf3} - WRITE, critical: true -> {2, 234} 
+Database   | Critical WRITE received, initiating REMOVE protocol 
+L2_0.0     | REMOVE sub-protocol completed 
+L2_2.0     | REMOVE sub-protocol completed 
+L2_1.0     | REMOVE sub-protocol completed 
+L2_2.1     | REMOVE sub-protocol completed 
+L2_0.1     | REMOVE sub-protocol completed 
+L2_1.1     | REMOVE sub-protocol completed 
+L1_0       | REMOVE sub-protocol completed 
+L1_2       | REMOVE sub-protocol completed 
+L1_1       | REMOVE sub-protocol completed 
+Database   | Snapshot {"4":579,"3":57,"2":234,"1":926,"0":216} 
+Database   | REMOVE protocol {de386ab4-b705-44b9-988c-5a6bc219cdf3} completed, propagating result 
+L1_2       | Crash in context [Result]! X( 
+L2_2.1     | L1_2 is dead X(. Targeting Database  
+Database   | Topology update :D - adding L2_2.1 as child 
+Database   | {id: de386ab4-b705-44b9-988c-5a6bc219cdf3} - WRITE, critical: true -> {2, 234} 
+Database   | Critical WRITE received, initiating REMOVE protocol 
+L2_1.0     | REMOVE sub-protocol completed 
+L2_1.1     | REMOVE sub-protocol completed 
+L2_0.0     | REMOVE sub-protocol completed 
+L2_0.1     | REMOVE sub-protocol completed 
+L2_2.1     | REMOVE sub-protocol completed 
+L1_0       | REMOVE sub-protocol completed 
+L1_1       | REMOVE sub-protocol completed 
+Database   | Timeout for L1_2, aborting REMOVE protocol 
+Client_0   | {id: de386ab4-b705-44b9-988c-5a6bc219cdf3} - ERROR :( - Write {2, 0}, reason -> Cache L1_2 timed out during the REMOVE protocol
+ 
+
+Client_0   | Requesting {id: 14064490-5433-4937-bf2e-581a7bfc1fdf} - WRITE, critical: false -> {1, 487} to L2_1.0 
+Database   | {id: 14064490-5433-4937-bf2e-581a7bfc1fdf} - WRITE, critical: false -> {1, 487} 
+Database   | Snapshot {"4":579,"3":57,"2":234,"1":487,"0":216} 
+Client_0   | {id: 14064490-5433-4937-bf2e-581a7bfc1fdf} - SUCCESS :D - Write result -> {1, 487}
+ 
+
+Client_0   | Requesting {id: b19aab86-dc95-40f5-95ab-8b73b00913b0} - READ, critical: false -> {4} to L2_2.1 
+L2_2.1     | (cache miss) {id: b19aab86-dc95-40f5-95ab-8b73b00913b0} - READ, critical: false -> {4} 
+Database   | {id: b19aab86-dc95-40f5-95ab-8b73b00913b0} - READ, critical: false -> {4} 
+Client_0   | {id: b19aab86-dc95-40f5-95ab-8b73b00913b0} - SUCCESS :D - Read result -> {4, 579}
+ 
+
+Client_0   | Requesting {id: 60e5fa00-9268-4989-8676-535748b8181c} - WRITE, critical: false -> {0, 948} to L2_0.1 
+Database   | {id: 60e5fa00-9268-4989-8676-535748b8181c} - WRITE, critical: false -> {0, 948} 
+Database   | Snapshot {"4":579,"3":57,"2":234,"1":487,"0":948} 
+Client_0   | {id: 60e5fa00-9268-4989-8676-535748b8181c} - SUCCESS :D - Write result -> {0, 948}
+ 
+
+Client_0   | Requesting {id: b9c6dd55-8719-4dca-90b5-2100f0bdc847} - WRITE, critical: false -> {0, 63} to L2_0.1 
+Database   | {id: b9c6dd55-8719-4dca-90b5-2100f0bdc847} - WRITE, critical: false -> {0, 63} 
+Database   | Snapshot {"4":579,"3":57,"2":234,"1":487,"0":63} 
+Client_0   | {id: b9c6dd55-8719-4dca-90b5-2100f0bdc847} - SUCCESS :D - Write result -> {0, 63}
+ 
+
+Client_0   | Requesting {id: ac7fe5b0-446e-410e-952f-30b7166ad918} - WRITE, critical: false -> {0, 651} to L2_0.0 
+Database   | {id: ac7fe5b0-446e-410e-952f-30b7166ad918} - WRITE, critical: false -> {0, 651} 
+Database   | Snapshot {"4":579,"3":57,"2":234,"1":487,"0":651} 
+Client_0   | {id: ac7fe5b0-446e-410e-952f-30b7166ad918} - SUCCESS :D - Write result -> {0, 651}
+ 
+L1_2       | Recovered! :D  
+L2_2.1     | Parent L1_2 recovered! Rebuilding topology :D 
+L2_2.0     | Parent L1_2 recovered! Rebuilding topology :D 
+Database   | Topology update :D - removing L2_2.1 as child 
+
+Client_0   | Requesting {id: 08261613-6bdd-45f1-b105-18f5dcef34bc} - READ, critical: false -> {4} to L2_1.0 
+L2_1.0     | (cache miss) {id: 08261613-6bdd-45f1-b105-18f5dcef34bc} - READ, critical: false -> {4} 
+L1_1       | (cache miss) {id: 08261613-6bdd-45f1-b105-18f5dcef34bc} - READ, critical: false -> {4} 
+Database   | {id: 08261613-6bdd-45f1-b105-18f5dcef34bc} - READ, critical: false -> {4} 
+Client_0   | {id: 08261613-6bdd-45f1-b105-18f5dcef34bc} - SUCCESS :D - Read result -> {4, 579}
+ 
+
+Client_0   | Requesting {id: f0e06e18-0cb4-4502-bb0b-3d4e88ffb660} - READ, critical: false -> {4} to L2_2.0 
+L2_2.0     | (cache miss) {id: f0e06e18-0cb4-4502-bb0b-3d4e88ffb660} - READ, critical: false -> {4} 
+L1_2       | (cache miss) {id: f0e06e18-0cb4-4502-bb0b-3d4e88ffb660} - READ, critical: false -> {4} 
+Database   | {id: f0e06e18-0cb4-4502-bb0b-3d4e88ffb660} - READ, critical: false -> {4} 
+Client_0   | {id: f0e06e18-0cb4-4502-bb0b-3d4e88ffb660} - SUCCESS :D - Read result -> {4, 579}
+ 
+
+> Task :CacheManager.main() FAILED
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':CacheManager.main()'.
+> Build cancelled while executing task ':CacheManager.main()'
+
+* Try:
+Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output. Run with --scan to get full insights.
+
+* Get more help at https://help.gradle.org
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 8.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+See https://docs.gradle.org/7.2/userguide/command_line_interface.html#sec:command_line_warnings
+
+BUILD FAILED in 56s
+2 actionable tasks: 2 executed

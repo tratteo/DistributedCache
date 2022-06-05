@@ -6,16 +6,19 @@ import akka.japi.pf.ReceiveBuilder;
 import com.google.gson.Gson;
 import it.unitn.ds1.Configuration;
 import it.unitn.ds1.Messages;
+import it.unitn.ds1.RemoveRequest;
 
 import java.io.Serializable;
 import java.util.*;
 
 public class DatabaseActor extends AgentActor {
     private final List<ActorRef> l1Caches;
+    private final ArrayList<RemoveRequest> removeRequests;
     private Map<Integer, Integer> databaseKeys;
 
     public DatabaseActor() {
         l1Caches = new ArrayList<>();
+        removeRequests = new ArrayList<>();
         populateDatabase();
     }
 
@@ -24,8 +27,38 @@ public class DatabaseActor extends AgentActor {
     }
 
     @Override
-    protected void onTimeout(Messages.IdentifiableMessage msg, ActorRef dest) {
+    protected void onAck(UUID ackId) {
+        ArrayList<RemoveRequest> toRemove = new ArrayList<>();
+        for (RemoveRequest request : removeRequests) {
+            request.requestsIds.remove(ackId);
+            if (request.requestsIds.size() <= 0) {
+                databaseKeys.put(request.key, request.value);
+                databaseSnapshot();
+                toRemove.add(request);
+                printFormatted("REMOVE protocol {%s} completed, propagating result", request.originalRequestId);
+                // All acks have been received, send the refill and result
+                Serializable refillMsg = new Messages.RefillMessage(request.key, request.value);
+                //Send the update to all L1 caches
+                for (ActorRef l1cache : l1Caches) {
+                    l1cache.tell(refillMsg, getSelf());
+                }
+                request.issuer.tell(Messages.OperationResultMessage.Success(request.originalRequestId, Messages.OperationResultMessage.Operation.Write, request.key, request.value), getSelf());
+            }
+        }
+        removeRequests.removeAll(toRemove);
+    }
 
+    @Override
+    protected void onTimeout(Messages.IdentifiableMessage msg, ActorRef dest) {
+        // If the timeout is on an ack for the remove request, re-send it
+        Optional<RemoveRequest> optRequest = removeRequests.stream().filter(r -> r.requestsIds.contains(msg.id)).findFirst();
+        // This happened because a cache has crashed during the remove protocol, respond with error
+        optRequest.ifPresent(removeRequest -> {
+            printFormatted("Timeout for %s, aborting REMOVE protocol", dest.path().name());
+            removeRequests.remove(removeRequest);
+            removeRequest.issuer.tell(Messages.OperationResultMessage.Error(removeRequest.originalRequestId, Messages.OperationResultMessage.Operation.Write, removeRequest.key,
+                                                                            String.format("Cache %s timed out during the REMOVE protocol", dest.path().name())), getSelf());
+        });
     }
 
     /**
@@ -39,50 +72,56 @@ public class DatabaseActor extends AgentActor {
         }
     }
 
-    //region Message Handlers
-
     private void onTopologyMessage(Messages.TopologyMessage message) {
+
         for (ActorRef a : message.children) {
             if (!l1Caches.contains(a)) {
-                printFormatted("Database adding %s as child", a.path().name());
+                printFormatted("Topology update :D - adding %s as child", a.path().name());
                 l1Caches.add(a);
             }
         }
         if (message.parent != null) {
             if (l1Caches.remove(message.parent)) {
-                printFormatted("Database removing %s as child", message.parent.path().name());
+                printFormatted("Topology update :D - removing %s as child", message.parent.path().name());
             }
         }
     }
 
+    //region Message Handlers
+
     private void onWriteMessage(Messages.WriteMessage msg) {
-        //Update the database
-        databaseKeys.put(msg.key, msg.value);
         printFormatted("%s", msg);
-        databaseSnapshot();
-        getSender().tell(new Messages.AckMessage(msg.id), getSelf());
+        ActorRef issuer = getSender();
+        issuer.tell(new Messages.AckMessage(msg.id), getSelf());
         //If the write operation is critical, then it is necessary to ensure that before updating no cache holds old values of item
         //so, we have to remove the item with old value from every cache before refill
         if (msg.isCritical) {
-            Serializable removeMsg = new Messages.RemoveMessage(msg.id, msg.key);
+            ArrayList<UUID> requestsIds = new ArrayList<>();
+            printFormatted("Critical WRITE received, initiating REMOVE protocol");
             for (ActorRef l1cache : l1Caches) {
-                l1cache.tell(removeMsg, getSelf());
+                UUID id = UUID.randomUUID();
+                requestsIds.add(id);
+                sendWithTimeout(new Messages.RemoveMessage(id, msg.key), l1cache, Configuration.DB_TIMEOUT);
             }
+            removeRequests.add(new RemoveRequest(msg.key, msg.value, msg.id, issuer, requestsIds));
         }
-
-        Serializable refillMsg = new Messages.RefillMessage(msg.id, msg.key, msg.value);
-        //Send the update to all L1 caches
-        for (ActorRef l1cache : l1Caches) {
-            l1cache.tell(refillMsg, ActorRef.noSender());
+        else {
+            databaseKeys.put(msg.key, msg.value);
+            databaseSnapshot();
+            Serializable refillMsg = new Messages.RefillMessage(msg.key, msg.value);
+            //Send the update to all L1 caches
+            for (ActorRef l1cache : l1Caches) {
+                l1cache.tell(refillMsg, ActorRef.noSender());
+            }
+            issuer.tell(Messages.OperationResultMessage.Success(msg.id, Messages.OperationResultMessage.Operation.Write, msg.key, databaseKeys.get(msg.key)), getSelf());
         }
-        getSender().tell(new Messages.OperationResultMessage(msg.id, Messages.OperationResultMessage.Operation.Write, msg.key, databaseKeys.get(msg.key)), getSelf());
     }
 
     private void onReadMessage(Messages.ReadMessage msg) {
         //operation is the same in both normal and critical version
         printFormatted("%s", msg);
         getSender().tell(new Messages.AckMessage(msg.id), getSelf());
-        getSender().tell(new Messages.OperationResultMessage(msg.id, Messages.OperationResultMessage.Operation.Read, msg.key, databaseKeys.get(msg.key)), getSelf());
+        getSender().tell(Messages.OperationResultMessage.Success(msg.id, Messages.OperationResultMessage.Operation.Read, msg.key, databaseKeys.get(msg.key)), getSelf());
     }
 
     private void databaseSnapshot() {
@@ -91,9 +130,11 @@ public class DatabaseActor extends AgentActor {
         printFormatted("Snapshot %s", json);
     }
 
-    //endregion
     @Override
     public ReceiveBuilder receiveBuilderFactory() {
         return receiveBuilder().match(Messages.TopologyMessage.class, this::onTopologyMessage).match(Messages.ReadMessage.class, this::onReadMessage).match(Messages.WriteMessage.class, this::onWriteMessage);
     }
+
+    //endregion
+
 }

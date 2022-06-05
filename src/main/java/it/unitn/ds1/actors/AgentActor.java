@@ -42,6 +42,12 @@ public abstract class AgentActor extends AbstractActor {
         }
     }
 
+    protected void removeTimeoutRequest(UUID id) {
+        timeoutMessages.remove(id);
+    }
+
+    protected abstract void onAck(UUID ackId);
+
     protected abstract void onTimeout(Messages.IdentifiableMessage msg, ActorRef dest);
 
     protected void clearTimeoutsMessages() {
@@ -54,6 +60,7 @@ public abstract class AgentActor extends AbstractActor {
         // If an ack has been received, that means that the target of the request was active, reset timeout
         //printFormatted("ACK! O.O from %s", getSender().path().name());
         timeoutMessages.remove(msg.id);
+        onAck(msg.id);
     }
 
     protected void printFormatted(String message, Object... args) {
