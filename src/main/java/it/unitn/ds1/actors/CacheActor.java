@@ -3,17 +3,17 @@ package it.unitn.ds1.actors;
 import akka.actor.ActorRef;
 import akka.actor.Props;
 import akka.japi.pf.ReceiveBuilder;
+import it.unitn.ds1.CacheElement;
 import it.unitn.ds1.Configuration;
 import it.unitn.ds1.Messages;
 import scala.concurrent.duration.Duration;
 
-import java.util.Hashtable;
-import java.util.List;
-import java.util.UUID;
+import java.io.Serializable;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 public class CacheActor extends AgentActor {
-    private final Hashtable<Integer, Integer> cache;
+    private final Map<Integer, CacheElement> cache;
     private final Hashtable<UUID, ActorRef> activeRequests;
     private ActorRef parent;
     private List<ActorRef> children;
@@ -30,8 +30,14 @@ public class CacheActor extends AgentActor {
         return Props.create(CacheActor.class, CacheActor::new);
     }
 
+
     @Override
     public ReceiveBuilder receiveBuilderFactory() {
+        getContext()
+                .system()
+                .scheduler()
+                .scheduleOnce(Duration.create(Configuration.EVICT_GRANULARITY, TimeUnit.MILLISECONDS), getSelf(), new CacheCycleMessage(Configuration.EVICT_GRANULARITY), getContext().system().dispatcher(), ActorRef.noSender());
+
         return receiveBuilder()
                 .match(Messages.TopologyMessage.class, this::onTopologyMessage)
                 .match(Messages.ReadMessage.class, this::onReadMessage)
@@ -39,8 +45,27 @@ public class CacheActor extends AgentActor {
                 .match(Messages.ClientsMessage.class, this::onClientsMessage)
                 .match(Messages.OperationResultMessage.class, this::onOperationResultMessage)
                 .match(Messages.RefillMessage.class, this::onRefillMessage)
+                .match(CacheCycleMessage.class, this::onCacheCycle)
                 .match(Messages.RecoveryMessage.class, this::onRecoveryMessage)
                 .match(Messages.RemoveMessage.class, this::onRemoveMessage);
+    }
+
+    private void onCacheCycle(CacheCycleMessage msg) {
+
+        ArrayList<Integer> toRemove = new ArrayList<>();
+        for (Map.Entry<Integer, CacheElement> entry : cache.entrySet()) {
+            entry.getValue().step(msg.deltaTime);
+            if (!entry.getValue().isValid()) {
+                toRemove.add(entry.getKey());
+            }
+        }
+        for (Integer k : toRemove) {
+            cache.keySet().remove(k);
+        }
+        getContext()
+                .system()
+                .scheduler()
+                .scheduleOnce(Duration.create(Configuration.EVICT_GRANULARITY, TimeUnit.MILLISECONDS), getSelf(), new CacheCycleMessage(Configuration.EVICT_GRANULARITY), getContext().system().dispatcher(), ActorRef.noSender());
     }
 
     // region Message Handlers
@@ -65,13 +90,24 @@ public class CacheActor extends AgentActor {
         sendWithTimeout(msg, parent, Configuration.TIMEOUT);
     }
 
+    private void updateCacheElement(int key, int value) {
+        CacheElement elem = cache.get(key);
+        if (elem == null) {
+            elem = new CacheElement(value, Configuration.EVICT_TIME);
+            cache.put(key, elem);
+        }
+        else {
+            elem.refreshed(value);
+        }
+    }
+
     private void onOperationResultMessage(Messages.OperationResultMessage msg) {
         if (shouldCrash()) {
             crash("Result");
             return;
         }
-        // Update our cache
-        cache.put(msg.key, msg.value);
+
+        updateCacheElement(msg.key, msg.value);
         // Forward back the message to the request issuer
         if (activeRequests.containsKey(msg.id)) {
             ActorRef issuer = activeRequests.get(msg.id);
@@ -98,7 +134,7 @@ public class CacheActor extends AgentActor {
         else {
             // Cache hit, respond immediately to the requester (sender), client or cache
             if (cache.containsKey(msg.key)) {
-                Messages.OperationResultMessage res = new Messages.OperationResultMessage(msg.id, Messages.OperationResultMessage.Operation.Read, msg.key, cache.get(msg.key));
+                Messages.OperationResultMessage res = new Messages.OperationResultMessage(msg.id, Messages.OperationResultMessage.Operation.Read, msg.key, cache.get(msg.key).value());
                 printFormatted("(cache hit) %s", msg);
                 issuer.tell(new Messages.AckMessage(msg.id), getSelf());
                 issuer.tell(res, getSelf());
@@ -122,7 +158,7 @@ public class CacheActor extends AgentActor {
             return;
         }
         // Update our cache
-        cache.put(msg.key, msg.value);
+        updateCacheElement(msg.key, msg.value);
 
         if (children != null) {
             for (ActorRef l2cache : children) {
@@ -169,6 +205,8 @@ public class CacheActor extends AgentActor {
         }
         else {
             parent = getSender();
+            Messages.TopologyMessage topMsg = new Messages.TopologyMessage(getSelf(), new ArrayList<>(Collections.singletonList(parent)), database);
+            database.tell(topMsg, getSelf());
             printFormatted("Parent %s recovered! Rebuilding topology :D", parent.path().name());
         }
     }
@@ -176,6 +214,8 @@ public class CacheActor extends AgentActor {
     @Override
     public void onTimeout(Messages.IdentifiableMessage msg, ActorRef dest) {
         parent = database;
+        Messages.TopologyMessage topMsg = new Messages.TopologyMessage(dest, new ArrayList<>(Collections.singletonList(getSelf())), database);
+        parent.tell(topMsg, getSelf());
         printFormatted("Removed %s as it seems dead X(, targeting %s ", dest.path().name(), parent.path().name());
         sendWithTimeout(msg, parent, Configuration.TIMEOUT);
     }
@@ -183,7 +223,7 @@ public class CacheActor extends AgentActor {
     //endregion
 
     private boolean shouldCrash() {
-        return Configuration.currentCrashes < Configuration.MAX_CONCURRENT_CRASHES && random.nextDouble() < Configuration.P_CRASH;
+        return Configuration.currentCrashes < Configuration.MAX_CONCURRENT_CRASHES && random.nextDouble() < Configuration.P_CRASH && children != null;
     }
 
     /**
@@ -208,6 +248,14 @@ public class CacheActor extends AgentActor {
      **/
     private Receive crashed() {
         return receiveBuilder().match(Messages.RecoveryMessage.class, this::onRecoveryMessage).matchAny(msg -> System.out.print("")).build();
+    }
+
+    private static class CacheCycleMessage implements Serializable {
+        public final int deltaTime;
+
+        public CacheCycleMessage(int deltaTime) {
+            this.deltaTime = deltaTime;
+        }
     }
 
 

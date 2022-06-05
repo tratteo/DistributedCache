@@ -8,16 +8,14 @@ import it.unitn.ds1.Configuration;
 import it.unitn.ds1.Messages;
 
 import java.io.Serializable;
-import java.util.Hashtable;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
+import java.util.*;
 
 public class DatabaseActor extends AgentActor {
-    private List<ActorRef> l1Caches;
+    private final List<ActorRef> l1Caches;
     private Map<Integer, Integer> databaseKeys;
 
     public DatabaseActor() {
+        l1Caches = new ArrayList<>();
         populateDatabase();
     }
 
@@ -44,7 +42,17 @@ public class DatabaseActor extends AgentActor {
     //region Message Handlers
 
     private void onTopologyMessage(Messages.TopologyMessage message) {
-        this.l1Caches = message.children;
+        for (ActorRef a : message.children) {
+            if (!l1Caches.contains(a)) {
+                printFormatted("Database adding %s as child", a.path().name());
+                l1Caches.add(a);
+            }
+        }
+        if (message.parent != null) {
+            if (l1Caches.remove(message.parent)) {
+                printFormatted("Database removing %s as child", message.parent.path().name());
+            }
+        }
     }
 
     private void onWriteMessage(Messages.WriteMessage msg) {
