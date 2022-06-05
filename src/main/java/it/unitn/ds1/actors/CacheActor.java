@@ -121,7 +121,7 @@ public class CacheActor extends AgentActor {
             return;
         }
 
-        if (msg.success) {
+        if (msg.success && msg.operation == Messages.OperationResultMessage.Operation.Read) {
             updateOrAddCacheElement(msg.key, msg.value);
         }
         else {
