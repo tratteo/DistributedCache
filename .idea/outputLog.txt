@@ -1,49 +1,23 @@
-> Task :compileJava
+> Task :compileJava UP-TO-DATE
 > Task :processResources NO-SOURCE
-> Task :classes
+> Task :classes UP-TO-DATE
 
 > Task :CacheManager.main()
 
-Executing configuration Random
+Executing configuration CriticalRead
 
 >>> Press ENTER to continue <<<
 Database   | Topology update :D - adding L1_0 as child 
 Database   | Topology update :D - adding L1_1 as child 
 Database   | Topology update :D - adding L1_2 as child 
 
-Client_0   | Requesting {id: b4fa159d-dc1d-422a-a297-95cce0f2d740} - READ, critical: false -> {1} to L2_1.0 
-L2_1.0     | (cache miss) {id: b4fa159d-dc1d-422a-a297-95cce0f2d740} - READ, critical: false -> {1} 
-L1_1       | (cache miss) {id: b4fa159d-dc1d-422a-a297-95cce0f2d740} - READ, critical: false -> {1} 
-Database   | {id: b4fa159d-dc1d-422a-a297-95cce0f2d740} - READ, critical: false -> {1} 
-Client_0   | {id: b4fa159d-dc1d-422a-a297-95cce0f2d740} - SUCCESS :D - Read result -> {1, 161}
- 
-
-Client_0   | Requesting {id: b6534b51-ee3b-48c8-b796-dd7fbd700163} - READ, critical: false -> {0} to L2_0.0 
-L2_0.0     | (cache miss) {id: b6534b51-ee3b-48c8-b796-dd7fbd700163} - READ, critical: false -> {0} 
-L1_0       | (cache miss) {id: b6534b51-ee3b-48c8-b796-dd7fbd700163} - READ, critical: false -> {0} 
-Database   | {id: b6534b51-ee3b-48c8-b796-dd7fbd700163} - READ, critical: false -> {0} 
-Client_0   | {id: b6534b51-ee3b-48c8-b796-dd7fbd700163} - SUCCESS :D - Read result -> {0, 969}
- 
-
-Client_0   | Requesting {id: 34d3f5e0-864d-4dee-9463-9968d3e8142a} - READ, critical: false -> {3} to L2_1.1 
-L2_1.1     | (cache miss) {id: 34d3f5e0-864d-4dee-9463-9968d3e8142a} - READ, critical: false -> {3} 
-L1_1       | (cache miss) {id: 34d3f5e0-864d-4dee-9463-9968d3e8142a} - READ, critical: false -> {3} 
-Database   | {id: 34d3f5e0-864d-4dee-9463-9968d3e8142a} - READ, critical: false -> {3} 
-Client_0   | {id: 34d3f5e0-864d-4dee-9463-9968d3e8142a} - SUCCESS :D - Read result -> {3, 718}
- 
-
-Client_0   | Requesting {id: a05e2663-7056-4651-96a0-a9a16e208225} - READ, critical: false -> {3} to L2_0.0 
-L2_0.0     | (cache miss) {id: a05e2663-7056-4651-96a0-a9a16e208225} - READ, critical: false -> {3} 
-L1_0       | (cache miss) {id: a05e2663-7056-4651-96a0-a9a16e208225} - READ, critical: false -> {3} 
-Database   | {id: a05e2663-7056-4651-96a0-a9a16e208225} - READ, critical: false -> {3} 
-Client_0   | {id: a05e2663-7056-4651-96a0-a9a16e208225} - SUCCESS :D - Read result -> {3, 718}
- 
-
-Client_0   | Requesting {id: b350f771-6f32-401b-82ea-6511fdd89755} - READ, critical: false -> {4} to L2_0.0 
-L2_0.0     | (cache miss) {id: b350f771-6f32-401b-82ea-6511fdd89755} - READ, critical: false -> {4} 
-L1_0       | (cache miss) {id: b350f771-6f32-401b-82ea-6511fdd89755} - READ, critical: false -> {4} 
-Database   | {id: b350f771-6f32-401b-82ea-6511fdd89755} - READ, critical: false -> {4} 
-Client_0   | {id: b350f771-6f32-401b-82ea-6511fdd89755} - SUCCESS :D - Read result -> {4, 704}
+Client_0   | Requesting {id: 787466aa-0ad6-4cee-8fc4-673b72faebc0} - READ, critical: true -> {4} to L2_2.1 
+L2_2.1     | {id: 787466aa-0ad6-4cee-8fc4-673b72faebc0} - READ, critical: true -> {4} 
+L1_2       | Crash in context [Read]! X( 
+L2_2.1     | L1_2 is dead X(. Targeting Database  
+Database   | Topology update :D - adding L2_2.1 as child 
+Database   | {id: 787466aa-0ad6-4cee-8fc4-673b72faebc0} - READ, critical: true -> {4} 
+Client_0   | {id: 787466aa-0ad6-4cee-8fc4-673b72faebc0} - SUCCESS :D - Read result -> {4, 177}
  
 
 > Task :CacheManager.main() FAILED
@@ -65,5 +39,5 @@ You can use '--warning-mode all' to show the individual deprecation warnings and
 
 See https://docs.gradle.org/7.2/userguide/command_line_interface.html#sec:command_line_warnings
 
-BUILD FAILED in 5s
-2 actionable tasks: 2 executed
+BUILD FAILED in 6s
+2 actionable tasks: 1 executed, 1 up-to-date

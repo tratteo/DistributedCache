@@ -264,7 +264,7 @@ public class CacheActor extends AgentActor {
 
     private synchronized boolean shouldCrash(CacheProtocolStage stage) {
         try {
-            if (isManaged) {
+            if (!isManaged) {
                 return crashSynchronizationContext.canCrash(stage) && random.nextDouble() < Configuration.P_CRASH;
             }
             else {

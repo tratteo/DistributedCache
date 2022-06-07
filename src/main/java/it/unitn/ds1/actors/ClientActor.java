@@ -9,17 +9,19 @@ import it.unitn.ds1.utils.enums.Operation;
 import scala.concurrent.duration.Duration;
 
 import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 public class ClientActor extends AgentActor {
     private final ArrayList<ActorRef> latestRecovers;
+    private final Queue<OperationNotifyMessage> requestedOperations;
+    private boolean isExecutingRequest = false;
     private ArrayList<ActorRef> l2Caches;
 
     public ClientActor(boolean isManaged) {
         super(isManaged);
         latestRecovers = new ArrayList<>();
+        requestedOperations = new ArrayDeque<>();
     }
 
     static public Props props(boolean isManaged) {
@@ -30,9 +32,9 @@ public class ClientActor extends AgentActor {
     protected void onAck(UUID ackId) {
     }
 
-
     private void onOperationMessageResult(Messages.OperationResultMessage msg) {
         printFormatted("%s%n", msg);
+        isExecutingRequest = false;
         if (!isManaged) {
             getContext()
                     .system()
@@ -40,18 +42,29 @@ public class ClientActor extends AgentActor {
                     .scheduleOnce(Duration.create(random.nextInt(Configuration.CLIENT_REQUEST_MAX_TIME - Configuration.CLIENT_REQUEST_MIN_TIME) + Configuration.CLIENT_REQUEST_MIN_TIME, TimeUnit.MILLISECONDS), getSelf(),
                                   getRandomOperation(), getContext().system().dispatcher(), ActorRef.noSender());
         }
+        else {
+            OperationNotifyMessage operation = requestedOperations.poll();
+            if (operation != null) {
+                performOperation(operation);
+            }
+        }
     }
 
     // region Message Handlers
     private OperationNotifyMessage getRandomOperation() {
-        boolean isCritical = random.nextDouble() < Configuration.P_CRITICAL;
-        Operation operation = random.nextDouble() < Configuration.P_WRITE ? Operation.Write : Operation.Read;
         ActorRef cache = l2Caches.get(random.nextInt(l2Caches.size()));
-        return new OperationNotifyMessage(operation, cache, isCritical);
+        return OperationNotifyMessage.Random(cache, random);
     }
 
     private void onOperationNotifyMessage(OperationNotifyMessage message) {
-        performOperation(message.cacheActor, message.operation, message.isCritical);
+        requestedOperations.add(message);
+        if (!isExecutingRequest) {
+            OperationNotifyMessage req = requestedOperations.poll();
+            if (req != null) {
+                performOperation(req);
+            }
+        }
+
     }
 
     @Override
@@ -65,24 +78,24 @@ public class ClientActor extends AgentActor {
         sendWithTimeout(msg, newCache, Configuration.CLIENT_TIMEOUT);
     }
 
-    public void performOperation(ActorRef cacheActor, Operation operation, boolean isCritical) {
+    public void performOperation(OperationNotifyMessage operation) {
+        isExecutingRequest = true;
         UUID requestId = UUID.randomUUID();
         Messages.IdentifiableMessage message = null;
-        switch (operation) {
+        switch (operation.operation) {
             case Read:
-                message = new Messages.ReadMessage(requestId, random.nextInt(Configuration.DATABASE_KEYS), isCritical);
+                message = new Messages.ReadMessage(requestId, operation.key, operation.isCritical);
                 break;
             case Write:
-                message = new Messages.WriteMessage(requestId, random.nextInt(Configuration.DATABASE_KEYS), random.nextInt(1000), isCritical);
+                message = new Messages.WriteMessage(requestId, operation.key, operation.value, operation.isCritical);
                 break;
         }
         System.out.println();
-        printFormatted("Requesting %s to %s", message, cacheActor.path().name());
-        sendWithTimeout(message, cacheActor, Configuration.CLIENT_TIMEOUT);
+        printFormatted("Requesting %s to %s", message, operation.cacheActor.path().name());
+        sendWithTimeout(message, operation.cacheActor, Configuration.CLIENT_TIMEOUT);
     }
 
     //endregion
-
 
     @Override
     public ReceiveBuilder receiveBuilderFactory() {
@@ -118,11 +131,37 @@ public class ClientActor extends AgentActor {
         public final Operation operation;
         public final ActorRef cacheActor;
         public final boolean isCritical;
+        public final int key;
+        public final int value;
 
-        public OperationNotifyMessage(Operation operation, ActorRef cacheActor, boolean isCritical) {
+        private OperationNotifyMessage(Operation operation, ActorRef cacheActor, boolean isCritical, int key, int value) {
             this.operation = operation;
             this.cacheActor = cacheActor;
             this.isCritical = isCritical;
+            this.key = key;
+            this.value = value;
+        }
+
+        public static OperationNotifyMessage Write(ActorRef cacheActor, boolean isCritical, int key, int value) {
+            return new OperationNotifyMessage(Operation.Write, cacheActor, isCritical, key, value);
+        }
+
+        public static OperationNotifyMessage Random(ActorRef cacheActor, Random random) {
+            boolean isCritical = random.nextDouble() < Configuration.P_CRITICAL;
+            Operation operation = random.nextDouble() < Configuration.P_WRITE ? Operation.Write : Operation.Read;
+            return new OperationNotifyMessage(operation, cacheActor, isCritical, DatabaseActor.getRandomKey(), DatabaseActor.getRandomValue());
+        }
+
+        public static OperationNotifyMessage Write(ActorRef cacheActor, boolean isCritical) {
+            return new OperationNotifyMessage(Operation.Write, cacheActor, isCritical, DatabaseActor.getRandomKey(), DatabaseActor.getRandomValue());
+        }
+
+        public static OperationNotifyMessage Read(ActorRef cacheActor, boolean isCritical, int key) {
+            return new OperationNotifyMessage(Operation.Read, cacheActor, isCritical, key, -1);
+        }
+
+        public static OperationNotifyMessage Read(ActorRef cacheActor, boolean isCritical) {
+            return new OperationNotifyMessage(Operation.Read, cacheActor, isCritical, DatabaseActor.getRandomKey(), -1);
         }
     }
 }

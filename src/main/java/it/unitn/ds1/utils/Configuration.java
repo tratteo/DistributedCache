@@ -5,13 +5,6 @@ import it.unitn.ds1.utils.enums.CacheProtocolStage;
 import java.util.EnumSet;
 
 public class Configuration {
-    public static final int DATABASE_KEYS = 5;
-
-    // region Topology
-    public static final int N_CLIENTS = 1;
-    public static final int N_L1 = 3;
-    public static final int N_L2_L1 = 2;
-    //endregion
 
     // region Timings
     public static final int CLIENT_REQUEST_MIN_TIME = 500;

@@ -13,6 +13,7 @@ import java.io.Serializable;
 import java.util.*;
 
 public class DatabaseActor extends AgentActor {
+    private static final int DATABASE_KEYS = 5;
     private final List<ActorRef> l1Caches;
     private final ArrayList<RemoveRequest> removeRequests;
     private Map<Integer, Integer> databaseKeys;
@@ -26,6 +27,14 @@ public class DatabaseActor extends AgentActor {
 
     static public Props props() {
         return Props.create(DatabaseActor.class, DatabaseActor::new);
+    }
+
+    public static int getRandomKey() {
+        return new Random(System.nanoTime()).nextInt(DATABASE_KEYS);
+    }
+
+    public static int getRandomValue() {
+        return new Random(System.nanoTime()).nextInt(1000);
     }
 
     @Override
@@ -69,7 +78,7 @@ public class DatabaseActor extends AgentActor {
     private void populateDatabase() {
         databaseKeys = new Hashtable<>();
         Random random = new Random();
-        for (int i = 0; i < Configuration.DATABASE_KEYS; i++) {
+        for (int i = 0; i < DATABASE_KEYS; i++) {
             databaseKeys.put(i, random.nextInt(1000));
         }
     }

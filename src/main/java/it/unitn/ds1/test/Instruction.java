@@ -1,4 +1,4 @@
-package it.unitn.ds1.instructions;
+package it.unitn.ds1.test;
 
 import akka.actor.ActorRef;
 
@@ -9,10 +9,14 @@ public class Instruction {
     public final Serializable messageInstruction;
     public final int delay;
 
+    public Instruction(ActorRef actor, Serializable messageInstruction) {
+        this(actor, messageInstruction, 0);
+    }
+
     public Instruction(ActorRef actor, Serializable messageInstruction, int delay) {
         this.actor = actor;
-        this.messageInstruction = messageInstruction;
         this.delay = delay;
+        this.messageInstruction = messageInstruction;
     }
 
     public void execute() {
