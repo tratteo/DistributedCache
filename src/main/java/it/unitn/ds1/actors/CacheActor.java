@@ -3,7 +3,9 @@ package it.unitn.ds1.actors;
 import akka.actor.ActorRef;
 import akka.actor.Props;
 import akka.japi.pf.ReceiveBuilder;
-import it.unitn.ds1.*;
+import it.unitn.ds1.utils.*;
+import it.unitn.ds1.utils.enums.CacheProtocolStage;
+import it.unitn.ds1.utils.enums.Operation;
 import scala.concurrent.duration.Duration;
 
 import java.io.Serializable;
@@ -15,21 +17,23 @@ public class CacheActor extends AgentActor {
     private final Hashtable<UUID, ActorRef> activeRequests;
     private final ArrayList<RemoveRequest> removeRequests;
     private final CrashSynchronizationContext crashSynchronizationContext;
+    private final Queue<CrashMessage> pendingCrashes;
     private ActorRef parent;
     private List<ActorRef> children;
     private List<ActorRef> clients;
     private ActorRef database;
 
-    public CacheActor(CrashSynchronizationContext crashSynchronizationContext) {
-        super();
+    public CacheActor(boolean isManaged, CrashSynchronizationContext crashSynchronizationContext) {
+        super(isManaged);
         this.crashSynchronizationContext = crashSynchronizationContext;
         cache = new Hashtable<>();
+        pendingCrashes = new ArrayDeque<>();
         activeRequests = new Hashtable<>();
         removeRequests = new ArrayList<>();
     }
 
-    static public Props props(CrashSynchronizationContext crashSynchronizationContext) {
-        return Props.create(CacheActor.class, () -> new CacheActor(crashSynchronizationContext));
+    static public Props props(boolean isManaged, CrashSynchronizationContext crashSynchronizationContext) {
+        return Props.create(CacheActor.class, () -> new CacheActor(isManaged, crashSynchronizationContext));
     }
 
     @Override
@@ -60,9 +64,14 @@ public class CacheActor extends AgentActor {
                 .match(Messages.ClientsMessage.class, this::onClientsMessage)
                 .match(Messages.OperationResultMessage.class, this::onOperationResultMessage)
                 .match(Messages.RefillMessage.class, this::onRefillMessage)
+                .match(CrashMessage.class, this::onCrashMessage)
                 .match(CacheCycleMessage.class, this::onCacheCycle)
                 .match(Messages.RecoveryMessage.class, this::onRecoveryMessage)
                 .match(Messages.RemoveMessage.class, this::onRemoveMessage);
+    }
+
+    private void onCrashMessage(CrashMessage msg) {
+        pendingCrashes.add(msg);
     }
 
     private void onCacheCycle(CacheCycleMessage msg) {
@@ -94,8 +103,8 @@ public class CacheActor extends AgentActor {
     }
 
     private void onWriteMessage(Messages.WriteMessage msg) {
-        if (shouldCrash(Configuration.ProtocolStage.Write)) {
-            crash("Write");
+        if (shouldCrash(CacheProtocolStage.Write)) {
+            crash(CacheProtocolStage.Write);
             return;
         }
         //Send the message to the parent
@@ -116,12 +125,12 @@ public class CacheActor extends AgentActor {
     }
 
     private void onOperationResultMessage(Messages.OperationResultMessage msg) {
-        if (shouldCrash(Configuration.ProtocolStage.Result)) {
-            crash("Result");
+        if (shouldCrash(CacheProtocolStage.Result)) {
+            crash(CacheProtocolStage.Result);
             return;
         }
 
-        if (msg.success && msg.operation == Messages.OperationResultMessage.Operation.Read) {
+        if (msg.success && msg.operation == Operation.Read) {
             updateOrAddCacheElement(msg.key, msg.value);
         }
         else {
@@ -138,8 +147,8 @@ public class CacheActor extends AgentActor {
     }
 
     private void onReadMessage(Messages.ReadMessage msg) {
-        if (shouldCrash(Configuration.ProtocolStage.Read)) {
-            crash("Read");
+        if (shouldCrash(CacheProtocolStage.Read)) {
+            crash(CacheProtocolStage.Read);
             return;
         }
         ActorRef issuer = getSender();
@@ -153,7 +162,7 @@ public class CacheActor extends AgentActor {
         else {
             // Cache hit, respond immediately to the requester (sender), client or cache
             if (cache.containsKey(msg.key)) {
-                Messages.OperationResultMessage res = Messages.OperationResultMessage.Success(msg.id, Messages.OperationResultMessage.Operation.Read, msg.key, cache.get(msg.key).value());
+                Messages.OperationResultMessage res = Messages.OperationResultMessage.Success(msg.id, Operation.Read, msg.key, cache.get(msg.key).value());
                 printFormatted("(cache hit) %s", msg);
                 issuer.tell(new Messages.AckMessage(msg.id), getSelf());
                 issuer.tell(res, getSelf());
@@ -167,13 +176,11 @@ public class CacheActor extends AgentActor {
                 sendWithTimeout(msg, parent, Configuration.TIMEOUT);
             }
         }
-
-
     }
 
     private void onRefillMessage(Messages.RefillMessage msg) {
-        if (shouldCrash(Configuration.ProtocolStage.Refill)) {
-            crash("Refill");
+        if (shouldCrash(CacheProtocolStage.Refill)) {
+            crash(CacheProtocolStage.Refill);
             return;
         }
         if (cache.containsKey(msg.key)) {
@@ -189,8 +196,8 @@ public class CacheActor extends AgentActor {
     }
 
     private void onRemoveMessage(Messages.RemoveMessage msg) {
-        if (shouldCrash(Configuration.ProtocolStage.Remove)) {
-            crash("Remove");
+        if (shouldCrash(CacheProtocolStage.Remove)) {
+            crash(CacheProtocolStage.Remove);
             return;
         }
         cache.remove(msg.key);
@@ -255,9 +262,19 @@ public class CacheActor extends AgentActor {
 
     //endregion
 
-    private synchronized boolean shouldCrash(Configuration.ProtocolStage stage) {
+    private synchronized boolean shouldCrash(CacheProtocolStage stage) {
         try {
-            return crashSynchronizationContext.canCrash(stage) && random.nextDouble() < Configuration.P_CRASH;
+            if (isManaged) {
+                return crashSynchronizationContext.canCrash(stage) && random.nextDouble() < Configuration.P_CRASH;
+            }
+            else {
+                CrashMessage crash = pendingCrashes.peek();
+                if (crash != null && crash.stage == stage) {
+                    pendingCrashes.poll();
+                    return true;
+                }
+                return false;
+            }
         } catch (Exception ignored) {
             return false;
         }
@@ -266,7 +283,7 @@ public class CacheActor extends AgentActor {
     /**
      * Emulate a crash and set up a notifier to recover after a given time
      **/
-    void crash(String context) {
+    void crash(CacheProtocolStage context) {
         getContext().become(crashed());
         cache.clear();
         activeRequests.clear();
@@ -296,5 +313,18 @@ public class CacheActor extends AgentActor {
         }
     }
 
+    public static class CrashMessage implements Serializable {
+        public final CacheProtocolStage stage;
+        public final int recoverTime;
+
+        public CrashMessage(CacheProtocolStage stage) {
+            this(stage, new Random(System.nanoTime()).nextInt(Configuration.RECOVERY_MAX_TIME - Configuration.RECOVERY_MIN_TIME) - Configuration.RECOVERY_MIN_TIME);
+        }
+
+        public CrashMessage(CacheProtocolStage stage, int recoverTime) {
+            this.stage = stage;
+            this.recoverTime = recoverTime;
+        }
+    }
 
 }

@@ -1,4 +1,6 @@
-package it.unitn.ds1;
+package it.unitn.ds1.utils;
+
+import it.unitn.ds1.utils.enums.CacheProtocolStage;
 
 import java.util.EnumSet;
 
@@ -34,11 +36,8 @@ public class Configuration {
 
     //EnumSet.allOf(ProtocolStage.class);
     //EnumSet.of(ProtocolStage.Read, ProtocolStage.Write, ProtocolStage.Result);
-    public static final EnumSet<ProtocolStage> STAGES_CRASH = EnumSet.allOf(ProtocolStage.class);
+    public static final EnumSet<CacheProtocolStage> STAGES_CRASH = EnumSet.allOf(CacheProtocolStage.class);
 
-    public enum ProtocolStage {
-        Read, Write, Refill, Remove, Result
-    }
 
     //endregion
 

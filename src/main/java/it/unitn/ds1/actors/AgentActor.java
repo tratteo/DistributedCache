@@ -3,7 +3,7 @@ package it.unitn.ds1.actors;
 import akka.actor.AbstractActor;
 import akka.actor.ActorRef;
 import akka.japi.pf.ReceiveBuilder;
-import it.unitn.ds1.Messages;
+import it.unitn.ds1.utils.Messages;
 import scala.concurrent.duration.Duration;
 
 import java.util.ArrayList;
@@ -17,11 +17,13 @@ import java.util.concurrent.TimeUnit;
  **/
 public abstract class AgentActor extends AbstractActor {
     protected final Random random;
+    protected final boolean isManaged;
     private final List<UUID> timeoutMessages;
 
-    public AgentActor() {
+    public AgentActor(boolean isManaged) {
         this.random = new Random();
         timeoutMessages = new ArrayList<>();
+        this.isManaged = isManaged;
     }
 
     /**

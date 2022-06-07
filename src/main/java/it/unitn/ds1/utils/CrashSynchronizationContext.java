@@ -1,4 +1,6 @@
-package it.unitn.ds1;
+package it.unitn.ds1.utils;
+
+import it.unitn.ds1.utils.enums.CacheProtocolStage;
 
 import java.util.concurrent.Semaphore;
 
@@ -10,7 +12,7 @@ public class CrashSynchronizationContext {
         crashSemaphore = new Semaphore(1, true);
     }
 
-    public synchronized boolean canCrash(Configuration.ProtocolStage stage) throws InterruptedException {
+    public synchronized boolean canCrash(CacheProtocolStage stage) throws InterruptedException {
         crashSemaphore.acquire();
         boolean res = Configuration.STAGES_CRASH.contains(stage) && currentCrashes < Configuration.MAX_CONCURRENT_CRASHES;
         crashSemaphore.release();

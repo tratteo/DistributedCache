@@ -4,9 +4,10 @@ import akka.actor.ActorRef;
 import akka.actor.Props;
 import akka.japi.pf.ReceiveBuilder;
 import com.google.gson.Gson;
-import it.unitn.ds1.Configuration;
-import it.unitn.ds1.Messages;
-import it.unitn.ds1.RemoveRequest;
+import it.unitn.ds1.utils.Configuration;
+import it.unitn.ds1.utils.Messages;
+import it.unitn.ds1.utils.RemoveRequest;
+import it.unitn.ds1.utils.enums.Operation;
 
 import java.io.Serializable;
 import java.util.*;
@@ -17,6 +18,7 @@ public class DatabaseActor extends AgentActor {
     private Map<Integer, Integer> databaseKeys;
 
     public DatabaseActor() {
+        super(false);
         l1Caches = new ArrayList<>();
         removeRequests = new ArrayList<>();
         populateDatabase();
@@ -42,7 +44,7 @@ public class DatabaseActor extends AgentActor {
                 for (ActorRef l1cache : l1Caches) {
                     l1cache.tell(refillMsg, getSelf());
                 }
-                request.issuer.tell(Messages.OperationResultMessage.Success(request.originalRequestId, Messages.OperationResultMessage.Operation.Write, request.key, request.value), getSelf());
+                request.issuer.tell(Messages.OperationResultMessage.Success(request.originalRequestId, Operation.Write, request.key, request.value), getSelf());
             }
         }
         removeRequests.removeAll(toRemove);
@@ -56,8 +58,8 @@ public class DatabaseActor extends AgentActor {
         optRequest.ifPresent(removeRequest -> {
             printFormatted("Timeout for %s, aborting REMOVE protocol", dest.path().name());
             removeRequests.remove(removeRequest);
-            removeRequest.issuer.tell(Messages.OperationResultMessage.Error(removeRequest.originalRequestId, Messages.OperationResultMessage.Operation.Write, removeRequest.key,
-                                                                            String.format("Cache %s timed out during the REMOVE protocol", dest.path().name())), getSelf());
+            removeRequest.issuer.tell(Messages.OperationResultMessage.Error(removeRequest.originalRequestId, Operation.Write, removeRequest.key, String.format("Cache %s timed out during the REMOVE protocol", dest.path().name())),
+                                      getSelf());
         });
     }
 
@@ -113,7 +115,7 @@ public class DatabaseActor extends AgentActor {
             for (ActorRef l1cache : l1Caches) {
                 l1cache.tell(refillMsg, ActorRef.noSender());
             }
-            issuer.tell(Messages.OperationResultMessage.Success(msg.id, Messages.OperationResultMessage.Operation.Write, msg.key, databaseKeys.get(msg.key)), getSelf());
+            issuer.tell(Messages.OperationResultMessage.Success(msg.id, Operation.Write, msg.key, databaseKeys.get(msg.key)), getSelf());
         }
     }
 
@@ -121,7 +123,7 @@ public class DatabaseActor extends AgentActor {
         //operation is the same in both normal and critical version
         printFormatted("%s", msg);
         getSender().tell(new Messages.AckMessage(msg.id), getSelf());
-        getSender().tell(Messages.OperationResultMessage.Success(msg.id, Messages.OperationResultMessage.Operation.Read, msg.key, databaseKeys.get(msg.key)), getSelf());
+        getSender().tell(Messages.OperationResultMessage.Success(msg.id, Operation.Read, msg.key, databaseKeys.get(msg.key)), getSelf());
     }
 
     private void databaseSnapshot() {

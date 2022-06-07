@@ -1,6 +1,7 @@
-package it.unitn.ds1;
+package it.unitn.ds1.utils;
 
 import akka.actor.ActorRef;
+import it.unitn.ds1.utils.enums.Operation;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -8,7 +9,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
-public class Messages {
+public final class Messages {
     public static abstract class IdentifiableMessage implements Serializable {
         public final UUID id;
 
@@ -89,9 +90,7 @@ public class Messages {
             }
         }
 
-        public enum Operation {
-            Read, Write
-        }
+
     }
 
     public static class WriteMessage extends IdentifiableMessage {
@@ -133,7 +132,6 @@ public class Messages {
         public final int key;
 
         public final int value;
-
 
         public RefillMessage(int key, int value) {
             this.key = key;
