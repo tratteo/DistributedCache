@@ -5,9 +5,10 @@ import akka.actor.ActorSystem;
 import it.unitn.ds1.actors.CacheActor;
 import it.unitn.ds1.actors.ClientActor;
 import it.unitn.ds1.actors.DatabaseActor;
-import it.unitn.ds1.utils.CrashSynchronizationContext;
-import it.unitn.ds1.utils.Messages;
-import it.unitn.ds1.utils.enums.CacheProtocolStage;
+import it.unitn.ds1.common.Configuration;
+import it.unitn.ds1.common.CrashSynchronizationContext;
+import it.unitn.ds1.common.Messages;
+import it.unitn.ds1.enums.CacheProtocolStage;
 import javafx.util.Pair;
 
 import java.util.*;
@@ -21,42 +22,87 @@ public class Tester {
             case Random: {
             }
             break;
+            case TopologyUpdates: {
+                ActorRef client = topology.clients.get(random.nextInt(topology.clients.size()));
+                SystemInstance.TopologyActor l2Cache0 = topology.l2Caches.get(0);
+                SystemInstance.TopologyActor l2Cache1 = topology.l2Caches.get(1);
+
+                instructions.add(new Instruction(client, ClientActor.OperationNotifyMessage.Read(l2Cache0.self, false)));
+                instructions.add(new Instruction(l2Cache0.parent, new CacheActor.CrashMessage(CacheProtocolStage.Read, Configuration.CLIENT_TIMEOUT)));
+                instructions.add(new Instruction(client, ClientActor.OperationNotifyMessage.Read(l2Cache0.self, false), 0));
+                instructions.add(new Instruction(client, ClientActor.OperationNotifyMessage.Read(l2Cache0.self, false), Configuration.CLIENT_TIMEOUT + 500));
+
+                int key = DatabaseActor.getRandomKey();
+
+                instructions.add(new Instruction(client, ClientActor.OperationNotifyMessage.Read(l2Cache1.self, false, key)));
+                instructions.add(new Instruction(l2Cache0.self, new CacheActor.CrashMessage(CacheProtocolStage.Read, Configuration.CLIENT_TIMEOUT * 2), Configuration.TIMEOUT));
+                instructions.add(new Instruction(client, ClientActor.OperationNotifyMessage.Read(l2Cache0.self, false, key)));
+                instructions.add(new Instruction(client, ClientActor.OperationNotifyMessage.Read(l2Cache0.self, false, key), Configuration.CLIENT_TIMEOUT * 3));
+
+            }
+            break;
             case CriticalRead: {
                 ActorRef client = topology.clients.get(random.nextInt(topology.clients.size()));
                 SystemInstance.TopologyActor l2Cache = topology.l2Caches.get(random.nextInt(topology.l2Caches.size()));
-                instructions.add(new Instruction(client, ClientActor.OperationNotifyMessage.Read(l2Cache.self, true)));
-                instructions.add(new Instruction(l2Cache.parent, new CacheActor.CrashMessage(CacheProtocolStage.Read)));
+                instructions.add(new Instruction(client, ClientActor.OperationNotifyMessage.Read(l2Cache.self, false)));
+                instructions.add(new Instruction(client, ClientActor.OperationNotifyMessage.Read(l2Cache.self, true), 500));
+                instructions.add(new Instruction(l2Cache.parent, new CacheActor.CrashMessage(CacheProtocolStage.Result, Configuration.CLIENT_TIMEOUT)));
             }
             break;
             case CriticalWriteFailure: {
+                // Done
                 ActorRef client = topology.clients.get(random.nextInt(topology.clients.size()));
+                SystemInstance.TopologyActor l1 = topology.l1Caches.get(0);
                 SystemInstance.TopologyActor l2Cache = topology.l2Caches.get(0);
                 SystemInstance.TopologyActor l2CacheRead = topology.l2Caches.get(1);
                 int key = DatabaseActor.getRandomKey();
                 int value = DatabaseActor.getRandomValue();
+                instructions.add(new Instruction(client, ClientActor.OperationNotifyMessage.Read(l2Cache.self, true, key)));
+                instructions.add(new Instruction(l1.self, new CacheActor.CrashMessage(CacheProtocolStage.Remove, Configuration.TIMEOUT * 5)));
                 instructions.add(new Instruction(client, ClientActor.OperationNotifyMessage.Write(l2Cache.self, true, key, value)));
-                instructions.add(new Instruction(l2Cache.parent, new CacheActor.CrashMessage(CacheProtocolStage.Remove)));
-                instructions.add(new Instruction(client, ClientActor.OperationNotifyMessage.Read(l2CacheRead.self, false, key), 4000));
+                instructions.add(new Instruction(client, ClientActor.OperationNotifyMessage.Read(l2CacheRead.self, false, key), Configuration.TIMEOUT * 2));
             }
             break;
-
             case CriticalWriteSuccess: {
+                // Done
                 ActorRef client = topology.clients.get(0);
                 ActorRef client1 = topology.clients.get(1);
                 SystemInstance.TopologyActor l2Cache = topology.l2Caches.get(0);
                 SystemInstance.TopologyActor l2CacheRead = topology.l2Caches.get(1);
                 int key = DatabaseActor.getRandomKey();
-                int value = DatabaseActor.getRandomValue();
-                instructions.add(new Instruction(client, ClientActor.OperationNotifyMessage.Write(l2Cache.self, true, key, value)));
+                instructions.add(new Instruction(client1, ClientActor.OperationNotifyMessage.Read(l2CacheRead.self, true, key)));
+                instructions.add(new Instruction(client1, ClientActor.OperationNotifyMessage.Write(l2CacheRead.self, false, key, DatabaseActor.getRandomValue())));
+                instructions.add(new Instruction(client, ClientActor.OperationNotifyMessage.Write(l2Cache.self, true, key, DatabaseActor.getRandomValue()), 1000));
                 instructions.add(new Instruction(client1, ClientActor.OperationNotifyMessage.Read(l2CacheRead.self, false, key), 500));
             }
             break;
-            case Read: {
-                // TODO create instruction set for a generic read with a crash
+            case EventualConsistency: {
+                // Done
+                ActorRef client = topology.clients.get(1);
+                SystemInstance.TopologyActor firstL1 = topology.l1Caches.get(0);
+                ActorRef l2 = firstL1.children.get(0);
+                int key = DatabaseActor.getRandomKey();
+                // client write with crash
+                instructions.add(new Instruction(client, ClientActor.OperationNotifyMessage.Read(l2, false, key)));
+                instructions.add(new Instruction(firstL1.self, new CacheActor.CrashMessage(CacheProtocolStage.Refill, Configuration.EVICT_TIME)));
+                instructions.add(new Instruction(client, ClientActor.OperationNotifyMessage.Write(l2, false, key, DatabaseActor.getRandomValue())));
+                instructions.add(new Instruction(client, ClientActor.OperationNotifyMessage.Read(l2, false, key)));
+                instructions.add(new Instruction(client, ClientActor.OperationNotifyMessage.Read(l2, false, key), (int) (Configuration.EVICT_TIME * 1.5)));
             }
             break;
-            case Write: {
-                // TODO create instruction set for a generic write with a crash
+            case MultipleCrashes: {
+                // Done
+                ActorRef client = topology.clients.get(0);
+                SystemInstance.TopologyActor l2 = topology.l2Caches.get(0);
+
+                int key = DatabaseActor.getRandomKey();
+                instructions.add(new Instruction(l2.self, new CacheActor.CrashMessage(CacheProtocolStage.Read, Configuration.CLIENT_TIMEOUT * 5)));
+                instructions.add(new Instruction(client, ClientActor.OperationNotifyMessage.Read(l2.self, false, key)));
+
+                instructions.add(new Instruction(client, ClientActor.OperationNotifyMessage.Write(l2.self, false, key, DatabaseActor.getRandomValue())));
+                instructions.add(new Instruction(l2.parent, new CacheActor.CrashMessage(CacheProtocolStage.Refill, Configuration.CLIENT_TIMEOUT * 5)));
+
+                instructions.add(new Instruction(client, ClientActor.OperationNotifyMessage.Read(l2.self, false), 1000));
             }
             break;
         }
@@ -65,18 +111,10 @@ public class Tester {
 
     private static SystemTopologyDescriptor getTopologyDescriptor(TestConfiguration configuration) {
         switch (configuration) {
-            case Random:
-                return new SystemTopologyDescriptor(2, 2, 2);
-            case CriticalRead:
-                return new SystemTopologyDescriptor(2, 2, 2);
-            case CriticalWriteFailure:
-                return new SystemTopologyDescriptor(2, 2, 2);
-            case CriticalWriteSuccess:
-                return new SystemTopologyDescriptor(2, 2, 2);
-            case Read:
-                return new SystemTopologyDescriptor(2, 2, 2);
-            case Write:
-                return new SystemTopologyDescriptor(2, 2, 2);
+            case TopologyUpdates:
+                return new SystemTopologyDescriptor(1, 1, 2);
+            case MultipleCrashes:
+                return new SystemTopologyDescriptor(1, 1, 2);
             default:
                 return new SystemTopologyDescriptor(2, 2, 2);
         }

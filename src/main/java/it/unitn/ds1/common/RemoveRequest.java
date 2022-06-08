@@ -1,4 +1,4 @@
-package it.unitn.ds1.utils;
+package it.unitn.ds1.common;
 
 import akka.actor.ActorRef;
 

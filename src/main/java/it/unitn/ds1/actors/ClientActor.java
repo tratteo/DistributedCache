@@ -3,9 +3,9 @@ package it.unitn.ds1.actors;
 import akka.actor.ActorRef;
 import akka.actor.Props;
 import akka.japi.pf.ReceiveBuilder;
-import it.unitn.ds1.utils.Configuration;
-import it.unitn.ds1.utils.Messages;
-import it.unitn.ds1.utils.enums.Operation;
+import it.unitn.ds1.common.Configuration;
+import it.unitn.ds1.common.Messages;
+import it.unitn.ds1.enums.Operation;
 import scala.concurrent.duration.Duration;
 
 import java.io.Serializable;

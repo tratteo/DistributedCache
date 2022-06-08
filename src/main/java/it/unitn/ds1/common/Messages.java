@@ -1,7 +1,7 @@
-package it.unitn.ds1.utils;
+package it.unitn.ds1.common;
 
 import akka.actor.ActorRef;
-import it.unitn.ds1.utils.enums.Operation;
+import it.unitn.ds1.enums.Operation;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -19,7 +19,7 @@ public final class Messages {
 
         @Override
         public String toString() {
-            return String.format("{id: %s} - ", id);
+            return "";// String.format("{id: %s} - ", id);
         }
     }
 
@@ -54,7 +54,6 @@ public final class Messages {
             this.clients = clients;
         }
     }
-
 
     public static class OperationResultMessage extends IdentifiableMessage {
         public final int key;

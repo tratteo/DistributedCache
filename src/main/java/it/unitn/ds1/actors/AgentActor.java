@@ -3,7 +3,7 @@ package it.unitn.ds1.actors;
 import akka.actor.AbstractActor;
 import akka.actor.ActorRef;
 import akka.japi.pf.ReceiveBuilder;
-import it.unitn.ds1.utils.Messages;
+import it.unitn.ds1.common.Messages;
 import scala.concurrent.duration.Duration;
 
 import java.util.ArrayList;

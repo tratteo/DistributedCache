@@ -3,9 +3,9 @@ package it.unitn.ds1.actors;
 import akka.actor.ActorRef;
 import akka.actor.Props;
 import akka.japi.pf.ReceiveBuilder;
-import it.unitn.ds1.utils.*;
-import it.unitn.ds1.utils.enums.CacheProtocolStage;
-import it.unitn.ds1.utils.enums.Operation;
+import it.unitn.ds1.common.*;
+import it.unitn.ds1.enums.CacheProtocolStage;
+import it.unitn.ds1.enums.Operation;
 import scala.concurrent.duration.Duration;
 
 import java.io.Serializable;
@@ -104,7 +104,7 @@ public class CacheActor extends AgentActor {
 
     private void onWriteMessage(Messages.WriteMessage msg) {
         if (shouldCrash(CacheProtocolStage.Write)) {
-            crash(CacheProtocolStage.Write);
+            crash();
             return;
         }
         //Send the message to the parent
@@ -126,7 +126,7 @@ public class CacheActor extends AgentActor {
 
     private void onOperationResultMessage(Messages.OperationResultMessage msg) {
         if (shouldCrash(CacheProtocolStage.Result)) {
-            crash(CacheProtocolStage.Result);
+            crash();
             return;
         }
 
@@ -148,7 +148,7 @@ public class CacheActor extends AgentActor {
 
     private void onReadMessage(Messages.ReadMessage msg) {
         if (shouldCrash(CacheProtocolStage.Read)) {
-            crash(CacheProtocolStage.Read);
+            crash();
             return;
         }
         ActorRef issuer = getSender();
@@ -180,7 +180,7 @@ public class CacheActor extends AgentActor {
 
     private void onRefillMessage(Messages.RefillMessage msg) {
         if (shouldCrash(CacheProtocolStage.Refill)) {
-            crash(CacheProtocolStage.Refill);
+            crash();
             return;
         }
         if (cache.containsKey(msg.key)) {
@@ -197,7 +197,7 @@ public class CacheActor extends AgentActor {
 
     private void onRemoveMessage(Messages.RemoveMessage msg) {
         if (shouldCrash(CacheProtocolStage.Remove)) {
-            crash(CacheProtocolStage.Remove);
+            crash();
             return;
         }
         cache.remove(msg.key);
@@ -269,11 +269,7 @@ public class CacheActor extends AgentActor {
             }
             else {
                 CrashMessage crash = pendingCrashes.peek();
-                if (crash != null && crash.stage == stage) {
-                    pendingCrashes.poll();
-                    return true;
-                }
-                return false;
+                return crash != null && crash.stage == stage;
             }
         } catch (Exception ignored) {
             return false;
@@ -283,19 +279,18 @@ public class CacheActor extends AgentActor {
     /**
      * Emulate a crash and set up a notifier to recover after a given time
      **/
-    void crash(CacheProtocolStage context) {
+    void crash() {
+        CrashMessage crashMessage = pendingCrashes.poll();
+        if (crashMessage == null) return;
         getContext().become(crashed());
         cache.clear();
         activeRequests.clear();
         removeRequests.clear();
         clearTimeoutsMessages();
+        int recoverTime = crashMessage.recoverTime > 0 ? crashMessage.recoverTime : random.nextInt(Configuration.RECOVERY_MAX_TIME - Configuration.RECOVERY_MIN_TIME) + Configuration.RECOVERY_MIN_TIME;
         try {crashSynchronizationContext.incrementCrashes();} catch (Exception ignored) {}
-        printFormatted("Crash in context [%s]! X(", context, parent.path().name());
-        getContext()
-                .system()
-                .scheduler()
-                .scheduleOnce(Duration.create(random.nextInt(Configuration.RECOVERY_MAX_TIME - Configuration.RECOVERY_MIN_TIME) + Configuration.RECOVERY_MIN_TIME, TimeUnit.MILLISECONDS), getSelf(), new Messages.RecoveryMessage(),
-                              getContext().system().dispatcher(), getSelf());
+        printFormatted("Crash in context [%s]! X(", crashMessage.stage, parent.path().name());
+        getContext().system().scheduler().scheduleOnce(Duration.create(recoverTime, TimeUnit.MILLISECONDS), getSelf(), new Messages.RecoveryMessage(), getContext().system().dispatcher(), getSelf());
     }
 
     /**

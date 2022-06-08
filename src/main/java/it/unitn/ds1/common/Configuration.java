@@ -1,6 +1,6 @@
-package it.unitn.ds1.utils;
+package it.unitn.ds1.common;
 
-import it.unitn.ds1.utils.enums.CacheProtocolStage;
+import it.unitn.ds1.enums.CacheProtocolStage;
 
 import java.util.EnumSet;
 
@@ -14,14 +14,14 @@ public class Configuration {
     public static final int CLIENT_TIMEOUT = TIMEOUT * 2;
     public static final int RECOVERY_MIN_TIME = 3000;
     public static final int RECOVERY_MAX_TIME = 10000;
-    public static final int EVICT_TIME = 5000;
+    public static final int EVICT_TIME = 10000;
     public static final int EVICT_GRANULARITY = 500;
     //endregion
 
     //region Probabilities
     public static final double P_WRITE = 0.35;
     public static final double P_CRITICAL = 0.25;
-    public static final double P_CRASH = 0.05;
+    public static final double P_CRASH = 0.025;
     // endregion
 
     //region Crashes

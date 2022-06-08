@@ -14,7 +14,18 @@ import java.util.Queue;
 public class CacheManager {
 
     public static void main(String[] args) throws InterruptedException {
-        executeConfiguration(TestConfiguration.Random);
+
+        // Execute the system with various test configurations. Hover the mouse over the enum name to read information about the configuration
+
+        // Randomly evolves the system
+        //executeConfiguration(TestConfiguration.Random);
+
+        executeConfiguration(TestConfiguration.CriticalRead);
+        executeConfiguration(TestConfiguration.CriticalWriteFailure);
+        executeConfiguration(TestConfiguration.CriticalWriteSuccess);
+        executeConfiguration(TestConfiguration.TopologyUpdates);
+        executeConfiguration(TestConfiguration.MultipleCrashes);
+        executeConfiguration(TestConfiguration.EventualConsistency);
     }
 
     private static void executeConfiguration(TestConfiguration configuration) throws InterruptedException {
@@ -38,7 +49,6 @@ public class CacheManager {
 
     private static void inputContinue() {
         try {
-            System.out.println("\n>>> Press ENTER to exit <<<");
             System.in.read();
         } catch (IOException ignored) {
         }

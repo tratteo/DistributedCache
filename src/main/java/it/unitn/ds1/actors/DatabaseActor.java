@@ -4,16 +4,16 @@ import akka.actor.ActorRef;
 import akka.actor.Props;
 import akka.japi.pf.ReceiveBuilder;
 import com.google.gson.Gson;
-import it.unitn.ds1.utils.Configuration;
-import it.unitn.ds1.utils.Messages;
-import it.unitn.ds1.utils.RemoveRequest;
-import it.unitn.ds1.utils.enums.Operation;
+import it.unitn.ds1.common.Configuration;
+import it.unitn.ds1.common.Messages;
+import it.unitn.ds1.common.RemoveRequest;
+import it.unitn.ds1.enums.Operation;
 
 import java.io.Serializable;
 import java.util.*;
 
 public class DatabaseActor extends AgentActor {
-    private static final int DATABASE_KEYS = 5;
+    private static final int DATABASE_KEYS = 15;
     private final List<ActorRef> l1Caches;
     private final ArrayList<RemoveRequest> removeRequests;
     private Map<Integer, Integer> databaseKeys;

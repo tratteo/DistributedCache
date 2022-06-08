@@ -1,6 +1,6 @@
-package it.unitn.ds1.utils;
+package it.unitn.ds1.common;
 
-import it.unitn.ds1.utils.enums.CacheProtocolStage;
+import it.unitn.ds1.enums.CacheProtocolStage;
 
 import java.util.concurrent.Semaphore;
 
