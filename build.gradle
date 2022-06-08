@@ -22,7 +22,7 @@ dependencies {
 compileJava {
     options.compilerArgs += ["-Xlint:deprecation"]
 }
-mainClassName = "it.unitn.ds1.VirtualSynch"
+mainClassName = "it.unitn.ds1.CacheManager"
 
 run {
     standardInput = System.in

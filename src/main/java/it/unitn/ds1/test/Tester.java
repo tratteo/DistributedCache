@@ -2,6 +2,7 @@ package it.unitn.ds1.test;
 
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
+import akka.japi.Pair;
 import it.unitn.ds1.actors.CacheActor;
 import it.unitn.ds1.actors.ClientActor;
 import it.unitn.ds1.actors.DatabaseActor;
@@ -9,7 +10,6 @@ import it.unitn.ds1.common.Configuration;
 import it.unitn.ds1.common.CrashSynchronizationContext;
 import it.unitn.ds1.common.Messages;
 import it.unitn.ds1.enums.CacheProtocolStage;
-import javafx.util.Pair;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -85,8 +85,8 @@ public class Tester {
                 // client write with crash
                 instructions.add(new Instruction(client, ClientActor.OperationNotifyMessage.Read(l2, false, key)));
                 instructions.add(new Instruction(firstL1.self, new CacheActor.CrashMessage(CacheProtocolStage.Refill, Configuration.EVICT_TIME)));
-                instructions.add(new Instruction(client, ClientActor.OperationNotifyMessage.Write(l2, false, key, DatabaseActor.getRandomValue())));
-                instructions.add(new Instruction(client, ClientActor.OperationNotifyMessage.Read(l2, false, key)));
+                instructions.add(new Instruction(client, ClientActor.OperationNotifyMessage.Write(l2, false, key, DatabaseActor.getRandomValue()), 500));
+                instructions.add(new Instruction(client, ClientActor.OperationNotifyMessage.Read(l2, false, key), 500));
                 instructions.add(new Instruction(client, ClientActor.OperationNotifyMessage.Read(l2, false, key), (int) (Configuration.EVICT_TIME * 1.5)));
             }
             break;

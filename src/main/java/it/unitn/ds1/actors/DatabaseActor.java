@@ -119,12 +119,12 @@ public class DatabaseActor extends AgentActor {
         else {
             databaseKeys.put(msg.key, msg.value);
             databaseSnapshot();
+            issuer.tell(Messages.OperationResultMessage.Success(msg.id, Operation.Write, msg.key, databaseKeys.get(msg.key)), getSelf());
             Serializable refillMsg = new Messages.RefillMessage(msg.key, msg.value);
             //Send the update to all L1 caches
             for (ActorRef l1cache : l1Caches) {
                 l1cache.tell(refillMsg, ActorRef.noSender());
             }
-            issuer.tell(Messages.OperationResultMessage.Success(msg.id, Operation.Write, msg.key, databaseKeys.get(msg.key)), getSelf());
         }
     }
 

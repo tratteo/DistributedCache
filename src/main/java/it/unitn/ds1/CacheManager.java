@@ -1,11 +1,11 @@
 package it.unitn.ds1;
 
 import akka.actor.ActorSystem;
+import akka.japi.Pair;
 import it.unitn.ds1.test.Instruction;
 import it.unitn.ds1.test.SystemInstance;
 import it.unitn.ds1.test.TestConfiguration;
 import it.unitn.ds1.test.Tester;
-import javafx.util.Pair;
 
 import java.io.IOException;
 import java.util.Queue;
@@ -38,7 +38,7 @@ public class CacheManager {
         Pair<SystemInstance, Queue<Instruction>> instance = Tester.buildEnvironment(system, configuration);
 
         // Execute instructions
-        for (Instruction instruction : instance.getValue()) {
+        for (Instruction instruction : instance.second()) {
             Thread.sleep(instruction.delay);
             instruction.execute();
         }
