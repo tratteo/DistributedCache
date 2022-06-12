@@ -28,5 +28,9 @@ public enum TestConfiguration {
     /**
      * Observe how the system dynamically updates the topology due to crashes and recovers
      **/
-    TopologyUpdates
+    TopologyUpdates,
+    /**
+     * Simulate a scenario that shows the causal consistency model in case of CRITWRITE and CRITREAD
+     **/
+    SequentialConsistency
 }

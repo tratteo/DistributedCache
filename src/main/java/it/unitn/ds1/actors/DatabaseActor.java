@@ -13,7 +13,7 @@ import java.io.Serializable;
 import java.util.*;
 
 public class DatabaseActor extends AgentActor {
-    private static final int DATABASE_KEYS = 15;
+    private static final int DATABASE_KEYS = 10;
     private final List<ActorRef> l1Caches;
     private final ArrayList<RemoveRequest> removeRequests;
     private Map<Integer, Integer> databaseKeys;
@@ -81,6 +81,7 @@ public class DatabaseActor extends AgentActor {
         for (int i = 0; i < DATABASE_KEYS; i++) {
             databaseKeys.put(i, random.nextInt(1000));
         }
+        databaseSnapshot();
     }
 
     private void onTopologyMessage(Messages.TopologyMessage message) {
@@ -138,14 +139,28 @@ public class DatabaseActor extends AgentActor {
     private void databaseSnapshot() {
         Gson gson = new Gson();
         String json = gson.toJson(databaseKeys);
-        printFormatted("Snapshot %s", json);
+        printFormattedForce("Snapshot %s", json);
     }
 
     @Override
     public ReceiveBuilder receiveBuilderFactory() {
-        return receiveBuilder().match(Messages.TopologyMessage.class, this::onTopologyMessage).match(Messages.ReadMessage.class, this::onReadMessage).match(Messages.WriteMessage.class, this::onWriteMessage);
+        return receiveBuilder()
+                .match(Messages.TopologyMessage.class, this::onTopologyMessage)
+                .match(DropDatabaseMessage.class, this::onDropDatabaseMessage)
+                .match(Messages.ReadMessage.class, this::onReadMessage)
+                .match(Messages.WriteMessage.class, this::onWriteMessage);
+    }
+
+    private void onDropDatabaseMessage(DropDatabaseMessage msg) {
+        for (Map.Entry<Integer, Integer> pair : databaseKeys.entrySet()) {
+            pair.setValue(0);
+        }
+        databaseSnapshot();
     }
 
     //endregion
+
+    // For testing purposes
+    public static class DropDatabaseMessage implements Serializable {}
 
 }

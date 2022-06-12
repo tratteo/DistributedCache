@@ -5,6 +5,8 @@ import it.unitn.ds1.enums.CacheProtocolStage;
 import java.util.EnumSet;
 
 public class Configuration {
+    public static final boolean VERBOSE = false;
+
 
     // region Timings
     public static final int CLIENT_REQUEST_MIN_TIME = 500;

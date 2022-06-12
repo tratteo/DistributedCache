@@ -13,6 +13,7 @@ import it.unitn.ds1.enums.CacheProtocolStage;
 
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 public class Tester {
     private static Queue<Instruction> getInstructionSet(TestConfiguration configuration, SystemInstance topology) {
@@ -105,8 +106,37 @@ public class Tester {
                 instructions.add(new Instruction(client, ClientActor.OperationNotifyMessage.Read(l2.self, false), 1000));
             }
             break;
+            case SequentialConsistency: {
+                topology.database.self.tell(new DatabaseActor.DropDatabaseMessage(), ActorRef.noSender());
+                try {
+                    Thread.sleep(500);
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+                int operationsNumber = 10000;
+                List<Integer> databaseValues = IntStream.rangeClosed(1, operationsNumber + 1).boxed().collect(Collectors.toList());
+                //Collections.shuffle(databaseValues);
+
+                for (int i = 0; i < operationsNumber; i++) {
+                    ActorRef randomClient = topology.clients.get(random.nextInt(topology.clients.size()));
+                    instructions.add(new Instruction(randomClient, getRandomCriticalClientOperation(random, topology, DatabaseActor.getRandomKey(), databaseValues.get(i))));
+                }
+            }
+            break;
         }
         return instructions;
+    }
+
+    private static ClientActor.OperationNotifyMessage getRandomCriticalClientOperation(Random random, SystemInstance system, int key, int value) {
+        ActorRef randomCache = system.l2Caches.get(random.nextInt(system.l2Caches.size())).self;
+        boolean write = random.nextDouble() < Configuration.P_WRITE;
+        if (write) {
+            return ClientActor.OperationNotifyMessage.Write(randomCache, true, key, value).ExecuteDelay(random.nextInt(2000));
+        }
+        else {
+            //.ExecuteDelay(random.nextInt(5000))
+            return ClientActor.OperationNotifyMessage.Read(randomCache, false, key).ExecuteDelay(random.nextInt(2000));
+        }
     }
 
     private static SystemTopologyDescriptor getTopologyDescriptor(TestConfiguration configuration) {
@@ -115,6 +145,8 @@ public class Tester {
                 return new SystemTopologyDescriptor(1, 1, 2);
             case MultipleCrashes:
                 return new SystemTopologyDescriptor(1, 1, 2);
+            case SequentialConsistency:
+                return new SystemTopologyDescriptor(6, 3, 2);
             default:
                 return new SystemTopologyDescriptor(2, 2, 2);
         }

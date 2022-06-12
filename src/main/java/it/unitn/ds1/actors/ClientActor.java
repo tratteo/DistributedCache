@@ -33,7 +33,7 @@ public class ClientActor extends AgentActor {
     }
 
     private void onOperationMessageResult(Messages.OperationResultMessage msg) {
-        printFormatted("%s%n", msg);
+        printFormattedForce("%s%n", msg);
         isExecutingRequest = false;
         if (!isManaged) {
             getContext()
@@ -57,12 +57,17 @@ public class ClientActor extends AgentActor {
     }
 
     private void onOperationNotifyMessage(OperationNotifyMessage message) {
-        requestedOperations.add(message);
-        if (!isExecutingRequest) {
-            OperationNotifyMessage req = requestedOperations.poll();
-            if (req != null) {
-                performOperation(req);
+        if (message.executeDelay <= 0) {
+            requestedOperations.add(message);
+            if (!isExecutingRequest) {
+                OperationNotifyMessage req = requestedOperations.poll();
+                if (req != null) {
+                    performOperation(req);
+                }
             }
+        }
+        else {
+            getContext().system().scheduler().scheduleOnce(Duration.create(message.executeDelay, TimeUnit.MILLISECONDS), getSelf(), message.ExecuteDelay(0), getContext().system().dispatcher(), ActorRef.noSender());
         }
 
     }
@@ -133,9 +138,11 @@ public class ClientActor extends AgentActor {
         public final boolean isCritical;
         public final int key;
         public final int value;
+        private int executeDelay;
 
-        private OperationNotifyMessage(Operation operation, ActorRef cacheActor, boolean isCritical, int key, int value) {
+        private OperationNotifyMessage(Operation operation, ActorRef cacheActor, boolean isCritical, int key, int value, int executeDelay) {
             this.operation = operation;
+            this.executeDelay = executeDelay;
             this.cacheActor = cacheActor;
             this.isCritical = isCritical;
             this.key = key;
@@ -143,25 +150,31 @@ public class ClientActor extends AgentActor {
         }
 
         public static OperationNotifyMessage Write(ActorRef cacheActor, boolean isCritical, int key, int value) {
-            return new OperationNotifyMessage(Operation.Write, cacheActor, isCritical, key, value);
+            return new OperationNotifyMessage(Operation.Write, cacheActor, isCritical, key, value, 0);
         }
 
         public static OperationNotifyMessage Random(ActorRef cacheActor, Random random) {
             boolean isCritical = random.nextDouble() < Configuration.P_CRITICAL;
             Operation operation = random.nextDouble() < Configuration.P_WRITE ? Operation.Write : Operation.Read;
-            return new OperationNotifyMessage(operation, cacheActor, isCritical, DatabaseActor.getRandomKey(), DatabaseActor.getRandomValue());
+            return new OperationNotifyMessage(operation, cacheActor, isCritical, DatabaseActor.getRandomKey(), DatabaseActor.getRandomValue(), 0);
         }
 
         public static OperationNotifyMessage Write(ActorRef cacheActor, boolean isCritical) {
-            return new OperationNotifyMessage(Operation.Write, cacheActor, isCritical, DatabaseActor.getRandomKey(), DatabaseActor.getRandomValue());
+            return new OperationNotifyMessage(Operation.Write, cacheActor, isCritical, DatabaseActor.getRandomKey(), DatabaseActor.getRandomValue(), 0);
         }
 
         public static OperationNotifyMessage Read(ActorRef cacheActor, boolean isCritical, int key) {
-            return new OperationNotifyMessage(Operation.Read, cacheActor, isCritical, key, -1);
+            return new OperationNotifyMessage(Operation.Read, cacheActor, isCritical, key, -1, 0);
         }
 
         public static OperationNotifyMessage Read(ActorRef cacheActor, boolean isCritical) {
-            return new OperationNotifyMessage(Operation.Read, cacheActor, isCritical, DatabaseActor.getRandomKey(), -1);
+            return new OperationNotifyMessage(Operation.Read, cacheActor, isCritical, DatabaseActor.getRandomKey(), -1, 0);
+        }
+
+
+        public OperationNotifyMessage ExecuteDelay(int executeDelay) {
+            this.executeDelay = executeDelay;
+            return this;
         }
     }
 }

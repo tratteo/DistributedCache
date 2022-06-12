@@ -3,6 +3,7 @@ package it.unitn.ds1.actors;
 import akka.actor.AbstractActor;
 import akka.actor.ActorRef;
 import akka.japi.pf.ReceiveBuilder;
+import it.unitn.ds1.common.Configuration;
 import it.unitn.ds1.common.Messages;
 import scala.concurrent.duration.Duration;
 
@@ -65,9 +66,14 @@ public abstract class AgentActor extends AbstractActor {
         onAck(msg.id);
     }
 
-    protected void printFormatted(String message, Object... args) {
+    protected void printFormattedForce(String message, Object... args) {
         System.out.format("%s %s %n", String.format("%-10s |", getSelf().path().name()), String.format(message, args));
         System.out.flush();
+    }
+
+    protected void printFormatted(String message, Object... args) {
+        if (!Configuration.VERBOSE) return;
+        printFormattedForce(message, args);
     }
 
     @Override

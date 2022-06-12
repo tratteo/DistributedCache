@@ -15,6 +15,7 @@ import java.util.concurrent.TimeUnit;
 public class CacheActor extends AgentActor {
     private final Map<Integer, CacheElement> cache;
     private final Hashtable<UUID, ActorRef> activeRequests;
+
     private final ArrayList<RemoveRequest> removeRequests;
     private final CrashSynchronizationContext crashSynchronizationContext;
     private final Queue<CrashMessage> pendingCrashes;
@@ -107,8 +108,8 @@ public class CacheActor extends AgentActor {
             crash();
             return;
         }
-        //Send the message to the parent
         ActorRef issuer = getSender();
+        //Send the message to the parent
         activeRequests.put(msg.id, issuer);
         sendWithTimeout(msg, parent, Configuration.TIMEOUT);
     }
@@ -130,8 +131,10 @@ public class CacheActor extends AgentActor {
             return;
         }
 
-        if (msg.success && msg.operation == Operation.Read) {
-            updateOrAddCacheElement(msg.key, msg.value);
+        if (msg.success) {
+            if (msg.operation == Operation.Read) {
+                updateOrAddCacheElement(msg.key, msg.value);
+            }
         }
         else {
             removeTimeoutRequest(msg.id);
@@ -152,6 +155,12 @@ public class CacheActor extends AgentActor {
             return;
         }
         ActorRef issuer = getSender();
+        //        if (activeCritRequests.contains(msg.key)) {
+        //            // TODO return error to client
+        //            issuer.tell(new Messages.AckMessage(msg.id), getSelf());
+        //            issuer.tell(Messages.OperationResultMessage.Error(msg.id, Operation.Read, msg.key, "Data locked by CRITICAL protocol"), getSelf());
+        //            return;
+        //        }
         //Check if the operation is critical or not
         if (msg.isCritical) {
             //if it is critical, then send the message regardless of cached item

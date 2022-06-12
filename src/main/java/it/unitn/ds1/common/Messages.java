@@ -82,7 +82,7 @@ public final class Messages {
         @Override
         public String toString() {
             if (success) {
-                return super.toString() + String.format("SUCCESS :D - %s result -> {%d, %d}", operation.toString(), key, value);
+                return super.toString() + String.format("SUCCESS :D - %s result -> %d %d", operation.toString(), key, value);
             }
             else {
                 return super.toString() + String.format("ERROR :( - %s {%d, %d}, reason -> %s", operation.toString(), key, value, reason);
