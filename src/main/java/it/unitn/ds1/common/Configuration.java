@@ -5,7 +5,7 @@ import it.unitn.ds1.enums.CacheProtocolStage;
 import java.util.EnumSet;
 
 public class Configuration {
-    public static final boolean VERBOSE = false;
+    public static final boolean VERBOSE = true;
 
 
     // region Timings

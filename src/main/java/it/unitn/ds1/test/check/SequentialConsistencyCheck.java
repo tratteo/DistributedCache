@@ -41,7 +41,7 @@ public class SequentialConsistencyCheck {
             System.out.println("\nOperations on key: " + entry.getKey());
             System.out.flush();
             for (Map.Entry<String, List<OperationContainer>> operationEntry : entry.getValue().entrySet()) {
-                System.out.print("\n" + operationEntry.getKey() + " -> [ ");
+                System.out.print(operationEntry.getKey() + " -> [ ");
                 System.out.flush();
                 List<OperationContainer> value = operationEntry.getValue();
                 for (int i = 0; i < value.size(); i++) {

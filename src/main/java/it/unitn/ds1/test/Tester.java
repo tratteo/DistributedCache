@@ -113,7 +113,7 @@ public class Tester {
                 } catch (InterruptedException e) {
                     throw new RuntimeException(e);
                 }
-                int operationsNumber = 10000;
+                int operationsNumber = 50;
                 List<Integer> databaseValues = IntStream.rangeClosed(1, operationsNumber + 1).boxed().collect(Collectors.toList());
                 //Collections.shuffle(databaseValues);
 
@@ -146,7 +146,7 @@ public class Tester {
             case MultipleCrashes:
                 return new SystemTopologyDescriptor(1, 1, 2);
             case SequentialConsistency:
-                return new SystemTopologyDescriptor(6, 3, 2);
+                return new SystemTopologyDescriptor(3, 3, 2);
             default:
                 return new SystemTopologyDescriptor(2, 2, 2);
         }

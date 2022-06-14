@@ -20,11 +20,11 @@ public class CacheManager {
         // Randomly evolves the system
         //executeConfiguration(TestConfiguration.Random);
 
-        executeConfiguration(TestConfiguration.SequentialConsistency);
+        //executeConfiguration(TestConfiguration.SequentialConsistency);
         //        executeConfiguration(TestConfiguration.CriticalRead);
-        //        executeConfiguration(TestConfiguration.CriticalWriteFailure);
+        //executeConfiguration(TestConfiguration.CriticalWriteFailure);
         //        executeConfiguration(TestConfiguration.CriticalWriteSuccess);
-        //        executeConfiguration(TestConfiguration.TopologyUpdates);
+        executeConfiguration(TestConfiguration.TopologyUpdates);
         //executeConfiguration(TestConfiguration.MultipleCrashes);
         //        executeConfiguration(TestConfiguration.EventualConsistency);
     }
