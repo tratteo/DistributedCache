@@ -1,3 +1,7 @@
+![GitHub](https://img.shields.io/github/license/tratteo/DistributedCache?color=orange&label=License)
+![GitHub top language](https://img.shields.io/github/languages/top/tratteo/DistributedCache?color=FF0035&label=Java)
+![GitHub last commit (branch)](https://img.shields.io/github/last-commit/tratteo/DistributedCache/main?label=Last%20commit&color=brightgreen&logo=github)
+ 
  ## Run
 To run this code, there are two ways:
 - Use an IDE that runs Akka projects written in Java. Open your IDE, load the project and then run it.
