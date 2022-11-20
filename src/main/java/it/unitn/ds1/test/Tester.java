@@ -113,7 +113,7 @@ public class Tester {
                 } catch (InterruptedException e) {
                     throw new RuntimeException(e);
                 }
-                int operationsNumber = 50;
+                int operationsNumber = 1000;
                 List<Integer> databaseValues = IntStream.rangeClosed(1, operationsNumber + 1).boxed().collect(Collectors.toList());
                 //Collections.shuffle(databaseValues);
 

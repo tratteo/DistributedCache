@@ -70,7 +70,12 @@ public class SequentialConsistencyCheck {
             while ((line = reader.readLine()) != null) {
                 if (isLineNotValid(line)) continue;
                 String[] l = line.split(" ");
-                int value = Integer.parseInt(l[l.length - 1]);
+                int value = 0;
+                try {
+                    value = Integer.parseInt(l[l.length - 1]);
+                } catch (Exception e) {
+
+                }
                 int key = Integer.parseInt(l[l.length - 2]);
                 Operation operation = Operation.valueOf(l[l.length - 5]);
                 if (operations.containsKey(key)) {

@@ -20,13 +20,13 @@ public class CacheManager {
         // Randomly evolves the system
         //executeConfiguration(TestConfiguration.Random);
 
-        //executeConfiguration(TestConfiguration.SequentialConsistency);
-        //        executeConfiguration(TestConfiguration.CriticalRead);
+        executeConfiguration(TestConfiguration.SequentialConsistency);
+        //executeConfiguration(TestConfiguration.CriticalRead);
         //executeConfiguration(TestConfiguration.CriticalWriteFailure);
-        //        executeConfiguration(TestConfiguration.CriticalWriteSuccess);
-        executeConfiguration(TestConfiguration.TopologyUpdates);
+        //executeConfiguration(TestConfiguration.CriticalWriteSuccess);
+        //executeConfiguration(TestConfiguration.TopologyUpdates);
         //executeConfiguration(TestConfiguration.MultipleCrashes);
-        //        executeConfiguration(TestConfiguration.EventualConsistency);
+        //executeConfiguration(TestConfiguration.EventualConsistency);
     }
 
     private static void executeConfiguration(TestConfiguration configuration) throws InterruptedException {

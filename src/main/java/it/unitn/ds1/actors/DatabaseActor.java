@@ -13,7 +13,7 @@ import java.io.Serializable;
 import java.util.*;
 
 public class DatabaseActor extends AgentActor {
-    private static final int DATABASE_KEYS = 3;
+    private static final int DATABASE_KEYS = 5;
     private final List<ActorRef> l1Caches;
     private final ArrayList<RemoveRequest> removeRequests;
     private Map<Integer, Integer> databaseKeys;
